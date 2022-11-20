@@ -6,6 +6,16 @@ gc()
 
 # Load data
 dat2 <- readRDS(file = "data/dat2.rds")
+dat2[, .N, keyby = .(essround, edition, proddate)]
+
+# dat2[cntry == "BG", as.list(summary(dweight)), keyby = .(essround)]
+# dat2[cntry == "BG", .(deff_p = .N * sum(dweight ^ 2) / sum(dweight) ^ 2),
+#      keyby = .(essround)]
+#
+# ggplot(data = dat2[cntry == "BG"], mapping = aes(x = dweight)) +
+#   geom_density() +
+#   facet_wrap(facets = vars(essround))
+
 variables <- readRDS(file = "data/variables.rds")
 
 round.labels <- unique(dat2$essround) |> sort()
