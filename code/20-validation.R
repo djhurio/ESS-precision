@@ -104,7 +104,7 @@ dat2[, .(essround, cntry, dweight, pspwght, pweight, anweight, prob)]
 dat2[, .(prob, as.numeric(prob))]
 dat2[, prob := as.numeric(prob)]
 
-dat2[, .N, keyby = .(is.na(prob), is.na(dweight))]
+dat2[, .N, keyby = .(na_prob = is.na(prob), na_dweight = is.na(dweight))]
 dat2[is.na(prob), .N, keyby = .(essround, cntry)]
 
 dat2[, .N, keyby = .(essround,

@@ -9,7 +9,7 @@
 # For rounds 7-8 integrated and SDDF files should be saved
 # For rounds since round 9 only integrated files should be saved
 #
-# All data is saved in SAV (SPSS format as ZIP files
+# All data is saved in SAV (SPSS format as ZIP files)
 
 # Reset ####
 rm(list = ls())
@@ -44,15 +44,15 @@ if (length(variables$varname) != 75L) stop("Check ICC variables")
 
 # ESS data
 
-# delete all sav files
-list.files(path = "data", pattern = ".sav$", full.names = T) |> file.remove()
-
-# unzip all data files
-for (x in list.files(path = "data", pattern = ".zip$", full.names = T)) {
-  cat(x, "\n")
-  unzip(zipfile = x, exdir = "data")
-}
-rm(x)
+# # delete all sav files
+# list.files(path = "data", pattern = ".sav$", full.names = T) |> file.remove()
+#
+# # unzip all data files
+# for (x in list.files(path = "data", pattern = ".zip$", full.names = T)) {
+#   cat(x, "\n")
+#   unzip(zipfile = x, exdir = "data")
+# }
+# rm(x)
 
 # SDDF is seperate for rounds 7-8
 read.ess <- function(r) {
@@ -85,28 +85,45 @@ read.ess <- function(r) {
 
 }
 
-dat_r7r8 <- lapply(7:8, read.ess)
-# lapply(dat_r7r8, class)
+# R7-R8
+dat_r7r8 <- map(.x = c(ESS07 = 7L, ESS08 = 8L), .f = read.ess)
+names(dat_r7r8)
+map_df(dat_r7r8, class)
 
-# Data since round 9 contains SDDF variables
-dat_r9pl <- list.files(
-  path = "data", pattern = "^ESS[19].*sav$", full.names = T
-) |> lapply(FUN = haven::read_sav) |> lapply(FUN = as.data.table)
-# lapply(dat_r9pl, class)
+
+# R9
+dat_r9 <- read_sav(file = list.files(
+  path = "data", pattern = "^ESS9.*sav$", full.names = T
+)) |> as.data.table()
+
+# R10
+files_r10 <- list.files(
+  path = "data", pattern = "^ESS10.*sav$", full.names = T
+)
+names(files_r10) <- basename(path = files_r10) |>
+  sub(pattern = "e.*sav$", replacement = "")
+names(files_r10)
+
+dat_r10 <- map(.x = files_r10, .f = haven::read_sav) |>
+  map(.f = as.data.table)
+names(dat_r10)
+map_df(dat_r10, class)
 
 # bind and remove
-dat <- c(dat_r7r8, dat_r9pl)
-rm(dat_r7r8, dat_r9pl)
-# lapply(dat, class)
+dat <- c(dat_r7r8, list(ESS09 = dat_r9), dat_r10)
+names(dat)
+map_df(dat, class)
+rm(dat_r7r8, dat_r9, dat_r10)
 
 
 # Save names of the variables
-dat.names <- lapply(dat, names)
-sapply(dat.names, length)
+dat.names <- map(dat, names)
+map_int(dat.names, length)
 
 # Rounds since R7
 # sprintf("%02d", 6:10)
-round.labels <- paste0("R", sprintf("%02d", 6L + seq_along(dat)))
+# round.labels <- paste0("R", sprintf("%02d", 6L + seq_along(dat)))
+round.labels <- names(dat)
 round.labels <- factor(round.labels, round.labels)
 print(round.labels)
 
@@ -124,7 +141,24 @@ variables[!(is.available)]
 # Some of the 75 variables are not available in all rounds
 # ICC will be assumed to be 0 in rounds when a variable is not available
 
+#      type varname ESS07 ESS08 ESS09 ESS10 ESS10SC is.available
+# 1: Binary  rlgblg  TRUE  TRUE  TRUE  TRUE   FALSE        FALSE
+# 2: Binary rlgblge  TRUE  TRUE  TRUE  TRUE   FALSE        FALSE
+# 3: Binary  dscrdk  TRUE  TRUE  TRUE  TRUE   FALSE        FALSE
+# 4: Binary dscrref  TRUE  TRUE  TRUE  TRUE   FALSE        FALSE
+# 5: Binary lvgptne FALSE FALSE FALSE FALSE   FALSE        FALSE
+# 6: Binary dvrcdev FALSE FALSE FALSE FALSE   FALSE        FALSE
 
+# rlgblg:  Belonging to particular religion or denomination
+# rlgblge: Ever belonging to particular religion or denomination
+# dscrdk:  Discrimination of respondent's group: don't know
+# dscrref: Discrimination of respondent's group: refusal
+
+variables[grep("dscr", varname)]
+
+# lvgptne: Ever lived with a partner, without being married
+# dvrcdev: Ever been divorced/had civil union dissolved
+grep("lvgptne|dvrcdev", names(dat$ESS10SC), value = T)
 
 # Variable selection to reduce the size of a data.table
 
@@ -207,6 +241,12 @@ fwrite(variables, file = "tables/variables.csv", quote = T)
 # Check the edition and production dates
 dat[, .N, keyby = .(essround, edition, proddate)]
 
+#    essround edition   proddate     N
+# 1:        7     2.2 01.12.2018 40185
+# 2:        8     2.2 10.12.2020 44387
+# 3:        9     3.1 17.02.2021 49519
+# 4:       10     2.0 08.12.2022 33351
+
 # # Test
 # dat[, .N]
 # dat[, .N, keyby = .(cntry)]
@@ -223,7 +263,9 @@ dat[, essround := factor(essround, sort(unique(essround)), round.labels)]
 table_cntry_essround <- dcast.data.table(
   data = dat, formula = cntry ~ essround, fun.aggregate = length
 )
+table_cntry_essround[R10 > 0]
 fwrite(x = table_cntry_essround, file = "tables/table_cntry_essround.csv")
+
 
 # Save data files for the next step
 saveRDS(object = dat, file = "data/dat.rds")
