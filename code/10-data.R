@@ -1,7 +1,7 @@
 # ESS survey data
 #
-# Data is downloaded from the ESS Data Portal
-# https://ess-search.nsd.no/
+# Data is downloaded from the ESS Data Wizard
+# https://ess-search.nsd.no/CDW/RoundCountry
 #
 # Data is download since round 7 (2014)
 # Data should be downloaded manualy and saved in the "data" folder
@@ -38,11 +38,78 @@ setnames(x = variables, new = c("type", "varname"))
 variables[, varname := tolower(varname)]
 variables
 
-variables$varname
-if (length(variables$varname) != 75L) stop("Check ICC variables")
+# Corrections for the variable list
+# https://myess.upf.edu/portal/g/:spaces:sampling/cst_sampling_weighting/ForumPortlet/topic/topicaa8906cc7f00010138aa844b7c289ac3/2
+#
+# Add variables
+x <- data.table(type = "Binary", varname = c("lvgptnea", "dvrcdeva", "scrlgblg"))
+variables <- rbind(variables, x)
+rm(x)
 
+setorder(variables, type, varname)
+variables
+
+
+# Survey design variables and weights
+varnames.design <- c("name", "essround", "edition", "proddate",
+                     "cntry", "idno",
+                     "domain", "stratum", "psu", "prob",
+                     "dweight", "pspwght", "pweight", "anweight")
 
 # ESS data
+
+data_ess_folder <- "~/Documents/data-ess"
+
+file_csv <- list.files(path = data_ess_folder,
+                       pattern = "csv$",
+                       full.names = T,
+                       recursive = T)
+
+dat_csv <- fread(file = file_csv,
+                 select = c(varnames.design, variables$varname))
+dat_csv
+
+# Self-completion
+dat_csv[, selfcomp := grepl("SC", name)]
+
+# Round
+# dat_csv[, .N, keyby = .(round = sprintf(fmt = "R%02d", essround))]
+dat_csv[, essround := factor(sprintf(fmt = "R%02d", essround))]
+dat_csv[, .N, keyby = .(essround)]
+
+# Production date
+# dat_csv[, .(proddate, lubridate::dmy(proddate))]
+dat_csv[, proddate := lubridate::dmy(proddate)]
+
+dat_csv[, .N, keyby = .(essround, selfcomp, edition, proddate, name)]
+dat_csv[, name := NULL]
+
+
+# Check design variables
+dat_csv[, map(.SD, \(x) any(!is.na(x))),
+        .SDcols = c("domain", "stratum", "psu", "prob"),
+        keyby = .(essround, selfcomp)]
+# Design variables are available only since the round 9.
+#
+#     essround selfcomp domain stratum   psu  prob
+#  1:      R01    FALSE  FALSE   FALSE FALSE FALSE
+#  2:      R02    FALSE  FALSE   FALSE FALSE FALSE
+#  3:      R03    FALSE  FALSE   FALSE FALSE FALSE
+#  4:      R04    FALSE  FALSE   FALSE FALSE FALSE
+#  5:      R05    FALSE  FALSE   FALSE FALSE FALSE
+#  6:      R06    FALSE  FALSE   FALSE FALSE FALSE
+#  7:      R07    FALSE  FALSE   FALSE FALSE FALSE
+#  8:      R08    FALSE  FALSE   FALSE FALSE FALSE
+#  9:      R09    FALSE   TRUE    TRUE  TRUE  TRUE
+# 10:      R10    FALSE   TRUE    TRUE  TRUE  TRUE
+# 11:      R10     TRUE   TRUE    TRUE  TRUE  TRUE
+
+# Check weight variables
+dat_csv[, map(.SD, \(x) any(!is.na(x))),
+        .SDcols = c("dweight", "pspwght", "pweight", "anweight"),
+        keyby = .(essround, selfcomp)]
+
+stop()
 
 # # delete all sav files
 # list.files(path = "data", pattern = ".sav$", full.names = T) |> file.remove()
@@ -162,12 +229,6 @@ grep("lvgptne|dvrcdev", names(dat$ESS10SC), value = T)
 
 # Variable selection to reduce the size of a data.table
 
-# Survey design variables and weights
-varnames.design <- c("essround", "edition", "proddate",
-                     "cntry", "idno",
-                     "dweight", "pspwght", "pweight", "anweight",
-                     "domain", "prob", "stratum", "psu")
-
 
 # Helper function to subselect necessary variables
 foo <- function(x) {
@@ -252,10 +313,6 @@ dat[, .N, keyby = .(essround, edition, proddate)]
 # dat[, .N, keyby = .(cntry)]
 
 
-# Production date
-# str(dat$proddate)
-dat[, proddate := lubridate::dmy(proddate)]
-dat[, .N, keyby = .(proddate)]
 
 
 # Number of respondents by country and round
