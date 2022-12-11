@@ -4,4 +4,7 @@
 .Ruserdata
 
 /data/*
+/results/*
+
 *.zip
+*.xlsx
