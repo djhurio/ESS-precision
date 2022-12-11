@@ -4,7 +4,9 @@
 .Ruserdata
 
 /data/*
+/data-ess/*
 /results/*
+/plots/*
 
 *.zip
 *.xlsx

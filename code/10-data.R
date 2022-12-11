@@ -4,10 +4,12 @@
 # https://ess-search.nsd.no/
 #
 # Data is download since round 7 (2014)
-# Data should be downloaded manualy and saved in the "data" folder
+# Data should be downloaded manualy and saved in the "data-ess" folder
 #
+# For rounds 1-6 sample design variables are not available anymore
 # For rounds 7-8 integrated and SDDF files should be saved
 # For rounds since round 9 only integrated files should be saved
+# For round 10 self-completion data file should be saved aditionaly
 #
 # All data is saved in SAV (SPSS format as ZIP files)
 
@@ -26,46 +28,67 @@ gc()
 # page 9
 # Appendix: Variables used for estimating the intra-cluster correlation, ρ
 
-variables <- read.xlsx(xlsxFile = "variables/ICC-variables.xlsx")
+variables <- openxlsx::read.xlsx(xlsxFile = "variables/ICC-variables.xlsx")
 setDT(variables)
 
-variables <- melt(data = variables,
-                  measure.vars = names(variables),
-                  na.rm = T)
-
-setnames(x = variables, new = c("type", "varname"))
+variables <- melt.data.table(data = variables,
+                             measure.vars = names(variables),
+                             na.rm = T,
+                             variable.name = "type",
+                             value.name = "varname")
 
 variables[, varname := tolower(varname)]
+
+# Corrections for the variable list
+# https://myess.upf.edu/portal/g/:spaces:sampling/cst_sampling_weighting/ForumPortlet/topic/topicaa8906cc7f00010138aa844b7c289ac3/2
+#
+# Add variables
+# lvgptnea is replacing lvgptne since the round 5
+# dvrcdeva is replacing dvrcdev since the round 5
+# scrlgblg is replacing lgblg for the round 10 SC data
+x <- data.table(type = "Binary", varname = c("lvgptnea", "dvrcdeva", "scrlgblg"))
+variables <- rbind(variables, x)
+rm(x)
+
+setorder(variables, type, varname)
 variables
 
-variables$varname
-if (length(variables$varname) != 75L) stop("Check ICC variables")
+if (length(variables$varname) != 75L + 3L) stop("Check ICC variables")
 
 
 # ESS data
-
-# # delete all sav files
-# list.files(path = "data", pattern = ".sav$", full.names = T) |> file.remove()
 #
-# # unzip all data files
-# for (x in list.files(path = "data", pattern = ".zip$", full.names = T)) {
-#   cat(x, "\n")
-#   unzip(zipfile = x, exdir = "data")
-# }
-# rm(x)
+# Download ESS data from the ESS Data Portal
+# https://ess-search.nsd.no/
+# Check if new versions of the files have been published
+# Update files as necessary
+
+# delete all sav and html files
+list.files(path = "data-ess",
+           pattern = "(sav|html)$",
+           full.names = T) |> file.remove()
+
+# unzip all data files
+for (x in list.files(path = "data-ess", pattern = ".zip$", full.names = T)) {
+  cat(x, "\n")
+  utils::unzip(zipfile = x, exdir = "data-ess")
+}
+rm(x)
+
 
 # SDDF is seperate for rounds 7-8
+# Function to combine main and sddf data files
 read.ess <- function(r) {
 
   # Survey data
   dat_surv <- list.files(
-    path = "data", pattern = glue::glue("^ESS{r}e.*sav$"), full.names = T
+    path = "data-ess", pattern = glue::glue("^ESS{r}e.*sav$"), full.names = T
   ) |> haven::read_sav()
   setDT(dat_surv)
 
   # SDDF data
   dat_sddf <- list.files(
-    path = "data", pattern = glue::glue("^ESS{r}SDDFe.*sav$"), full.names = T
+    path = "data-ess", pattern = glue::glue("^ESS{r}SDDFe.*sav$"), full.names = T
   ) |> haven::read_sav()
   setDT(dat_sddf)
 
@@ -93,15 +116,15 @@ map_df(dat_r7r8, class)
 
 # R9
 dat_r9 <- read_sav(file = list.files(
-  path = "data", pattern = "^ESS9.*sav$", full.names = T
+  path = "data-ess", pattern = "^ESS9.*sav$", full.names = T
 )) |> as.data.table()
 
 # R10
 files_r10 <- list.files(
-  path = "data", pattern = "^ESS10.*sav$", full.names = T
+  path = "data-ess", pattern = "^ESS10.*sav$", full.names = T
 )
 names(files_r10) <- basename(path = files_r10) |>
-  sub(pattern = "e.*sav$", replacement = "")
+  sub(pattern = ".sav$", replacement = "")
 names(files_r10)
 
 dat_r10 <- map(.x = files_r10, .f = haven::read_sav) |>
@@ -133,46 +156,42 @@ variables[, c(as.character(round.labels)) := lapply(
   X = dat.names, FUN = function(x) (variables$varname %in% x))
 ]
 
-variables[, is.available := all(unlist(.SD)),
+variables[, flag := !all(unlist(.SD)),
           .SDcols = as.character(round.labels),
           by = .(varname)]
-variables[, .N, keyby = .(is.available)]
-variables[!(is.available)]
-# Some of the 75 variables are not available in all rounds
-# ICC will be assumed to be 0 in rounds when a variable is not available
+variables[, .N, keyby = .(flag)]
 
-#      type varname ESS07 ESS08 ESS09 ESS10 ESS10SC is.available
-# 1: Binary  rlgblg  TRUE  TRUE  TRUE  TRUE   FALSE        FALSE
-# 2: Binary rlgblge  TRUE  TRUE  TRUE  TRUE   FALSE        FALSE
-# 3: Binary  dscrdk  TRUE  TRUE  TRUE  TRUE   FALSE        FALSE
-# 4: Binary dscrref  TRUE  TRUE  TRUE  TRUE   FALSE        FALSE
-# 5: Binary lvgptne FALSE FALSE FALSE FALSE   FALSE        FALSE
-# 6: Binary dvrcdev FALSE FALSE FALSE FALSE   FALSE        FALSE
+variables[(flag)]
+#      type  varname ESS07 ESS08 ESS09 ESS10 ESS10SC flag
+# 1: Binary   dscrdk  TRUE  TRUE  TRUE  TRUE   FALSE TRUE
+# 2: Binary  dscrref  TRUE  TRUE  TRUE  TRUE   FALSE TRUE
+# 3: Binary  dvrcdev FALSE FALSE FALSE FALSE   FALSE TRUE
+# 4: Binary  lvgptne FALSE FALSE FALSE FALSE   FALSE TRUE
+# 5: Binary   rlgblg  TRUE  TRUE  TRUE  TRUE   FALSE TRUE
+# 6: Binary  rlgblge  TRUE  TRUE  TRUE  TRUE   FALSE TRUE
+# 7: Binary scrlgblg FALSE FALSE FALSE FALSE    TRUE TRUE
 
-# rlgblg:  Belonging to particular religion or denomination
-# rlgblge: Ever belonging to particular religion or denomination
-# dscrdk:  Discrimination of respondent's group: don't know
-# dscrref: Discrimination of respondent's group: refusal
+variables[, map(.SD, sum), .SDcols = as.character(round.labels)]
+#    ESS07 ESS08 ESS09 ESS10 ESS10SC
+# 1:    75    75    75    75      72
 
-variables[grep("dscr", varname)]
+# Some of the variables are not available in all rounds
+# Those variables will be excluded for the ICC estimation
 
-# lvgptne: Ever lived with a partner, without being married
-# dvrcdev: Ever been divorced/had civil union dissolved
-grep("lvgptne|dvrcdev", names(dat$ESS10SC), value = T)
 
 # Variable selection to reduce the size of a data.table
 
 # Survey design variables and weights
-varnames.design <- c("essround", "edition", "proddate",
+varnames.design <- c("name", "essround", "edition", "proddate",
                      "cntry", "idno",
-                     "dweight", "pspwght", "pweight", "anweight",
-                     "domain", "prob", "stratum", "psu")
+                     "domain", "stratum", "psu", "prob",
+                     "dweight", "pspwght", "pweight", "anweight")
 
 
 # Helper function to subselect necessary variables
-foo <- function(x) {
-  name_sel <- intersect(names(x), c(varnames.design, variables$varname))
-  x[, c(name_sel), with = F]
+foo <- function(dt) {
+  name_sel <- intersect(c(varnames.design, variables$varname), names(dt))
+  dt[, c(name_sel), with = F]
 }
 
 # Keep only necessary variables
@@ -186,8 +205,11 @@ dat <- lapply(dat, foo)
 
 # Combine data from all rounds in one data.table
 dat <- rbindlist(dat, use.names = T, fill = T)
-class(dat)
 gc()
+
+setcolorder(dat, intersect(c(varnames.design, variables$varname), names(dat)))
+class(dat)
+names(dat)
 
 
 # Remove all extra attributes (from the SPSS data file)
@@ -200,12 +222,12 @@ dat <- haven::zap_widths(dat)
 # str(dat)
 
 
-# Create variables which are missing for all rounds
-x <- setdiff(variables$varname, names(dat))
-if (length(x) > 0) dat[, c(x) := as.list(rep(NA_real_, length(x)))]
-x <- setdiff(variables$varname, names(dat))
-if (length(x) > 0) stop("Not all variables available")
-rm(x)
+# # Create variables which are missing for all rounds
+# x <- setdiff(variables$varname, names(dat))
+# if (length(x) > 0) dat[, c(x) := as.list(rep(NA_real_, length(x)))]
+# x <- setdiff(variables$varname, names(dat))
+# if (length(x) > 0) stop("Not all variables available")
+# rm(x)
 
 # Check values for the target variables
 
@@ -225,7 +247,8 @@ variables[, values := foo(varname), by = varname]
 
 # Write out table about the target variables
 write.xlsx(variables, file = "tables/variables.xlsx",
-           colWidths = "auto", firstRow = T,
+           colWidths = "auto",
+           firstRow = T,
            headerStyle = createStyle(textDecoration = "italic",
                                      halign = "center"))
 
@@ -239,27 +262,32 @@ fwrite(variables, file = "tables/variables.csv", quote = T)
 
 
 # Check the edition and production dates
-dat[, .N, keyby = .(essround, edition, proddate)]
+dat[, .N, keyby = .(name, essround, edition, proddate)]
 
-#    essround edition   proddate     N
-# 1:        7     2.2 01.12.2018 40185
-# 2:        8     2.2 10.12.2020 44387
-# 3:        9     3.1 17.02.2021 49519
-# 4:       10     2.0 08.12.2022 33351
 
-# # Test
-# dat[, .N]
-# dat[, .N, keyby = .(cntry)]
+# Self-completion
+dat[, selfcomp := grepl("SC", name)]
+dat[, .N, keyby = .(selfcomp)]
+dat[, name := NULL]
 
+# Round
+dat[, essround := factor(sprintf(fmt = "R%02d", essround))]
+dat[, .N, keyby = .(essround)]
 
 # Production date
-# str(dat$proddate)
 dat[, proddate := lubridate::dmy(proddate)]
 dat[, .N, keyby = .(proddate)]
 
+dat[, .N, keyby = .(essround, selfcomp, edition, proddate)]
+#    essround selfcomp edition   proddate     N
+# 1:      R07    FALSE     2.2 2018-12-01 40185
+# 2:      R08    FALSE     2.2 2020-12-10 44387
+# 3:      R09    FALSE     3.1 2021-02-17 49519
+# 4:      R10    FALSE     2.0 2022-12-08 33351
+# 5:      R10     TRUE     1.0 2022-12-08 18868
+
 
 # Number of respondents by country and round
-dat[, essround := factor(essround, sort(unique(essround)), round.labels)]
 table_cntry_essround <- dcast.data.table(
   data = dat, formula = cntry ~ essround, fun.aggregate = length
 )

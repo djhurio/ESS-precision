@@ -16,7 +16,7 @@ dat[is.na(domain), domain := 1L]
 dat[, .N, keyby = .(domain)]
 dcast.data.table(dat, essround ~ domain, fun.aggregate = length)
 
-if (anyDuplicated(dat, by = c("essround", "cntry", "domain", "idno"))) {
+if (anyDuplicated(dat, by = c("essround", "cntry", "idno"))) {
     stop("Duplicated records in data")
 }
 
@@ -152,7 +152,7 @@ pl <- ggplot(tmp[!is.na(prob)],
     facet_grid(essround ~ cntry) +
     theme_bw()
 
-ggsave(filename = "results/plot_dweight.png", plot = pl, width = 16, height = 9)
+ggsave(filename = "plots/plot_dweight.png", plot = pl, width = 16, height = 9)
 # Extreme design weights are being cut
 
 
@@ -174,8 +174,18 @@ tmp[abs(dweight - dweight2) > .1, .N, keyby = .(dweight2 > dweight)]
 
 
 # dat2[, weight_des := dw]
+
+dat2[!is.na(anweight), .(anweight, pspwght * pweight)]
+dat2[!is.na(anweight), all.equal(anweight, pspwght * pweight)]
+
+dat2[, .N, keyby = .(is.na(pspwght))]
+
+# Design wights used for the deff_p estimation
 dat2[, weight_des := dweight * pweight * 10e3]
-dat2[, weight_est := pspwght * pweight * 10e3]
+
+# Estimation weights used for the pop size and ratio linearisation
+dat2[!is.na(pspwght), weight_est := pspwght * pweight * 10e3]
+dat2[ is.na(pspwght), weight_est := weight_des]
 
 dat2[, lapply(.SD, sum), .SDcols = c("weight_des", "weight_est"),
      keyby = .(essround)]

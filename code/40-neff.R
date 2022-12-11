@@ -74,7 +74,7 @@ pl_b <- ggplot(dat_b) +
 
 # deff_p
 dat_deff_p <- dat2[, .(deff_p = .N * sum(weight_des ^ 2) / sum(weight_des) ^ 2),
-                   keyby = .(essround, cntry, domain)]
+                   keyby = .(essround, selfcomp, cntry, domain)]
 
 dat_deff_p
 dat_deff_p[, as.list(summary(deff_p))]
@@ -139,7 +139,7 @@ dat_deff[, deff := deff_p * deff_c]
 dat_deff
 
 dat_deff[, as.list(summary(deff))]
-dat_deff[, as.list(summary(deff)), keyby = .(essround)]
+dat_deff[, as.list(summary(deff)), keyby = .(essround, selfcomp)]
 dat_deff[, as.list(summary(deff)), keyby = .(cntry)][order(Mean)]
 dat_deff[, as.list(summary(deff)), keyby = .(varname)][order(Mean)]
 
@@ -216,10 +216,10 @@ tab_deff <- dat_deff[, c(.(n_variable = as.numeric(.N)),
                          .(ICC_median = median(ICC))),
                      .SDcols = c("n_resp", "pop_size", "ICC", "b",
                                  "deff_c", "deff_p", "deff"),
-                     keyby = .(essround, cntry, domain)]
+                     keyby = .(essround, selfcomp, cntry, domain)]
 
 tab_deff
-tab_deff[, mean(n_variable)]
+tab_deff[, mean(n_variable), keyby = .(essround, selfcomp)]
 tab_deff[, sum(n_variable)]
 
 tab_deff[, all.equal(deff_c, 1 + (b - 1) * ICC)]
@@ -248,11 +248,11 @@ pl_ICC_test2 <- pl_ICC_test1 +
   geom_text(mapping = aes(label = paste(cntry, essround, sep = "_")),
             alpha = .5)
 
-pl_ICC_test1
-pl_ICC_test2
+# pl_ICC_test1
+# pl_ICC_test2
 
-ggsave(filename = "results/pl_ICC_test1.png", plot = pl_ICC_test1)
-ggsave(filename = "results/pl_ICC_test2.png", plot = pl_ICC_test2)
+ggsave(filename = "plots/pl_ICC_test1.png", plot = pl_ICC_test1)
+ggsave(filename = "plots/pl_ICC_test2.png", plot = pl_ICC_test2)
 
 pl_ICC <- ggplot(tab_deff) +
   geom_col(aes(x = essround, y = ICC, fill = essround, linetype = domain),
@@ -297,7 +297,7 @@ tab_deff_2 <- tab_deff[, c(.(n_domains = as.numeric(.N),
                              n_variable = mean(n_variable)),
                            lapply(.SD, sum)),
                        .SDcols = c("n_resp", "pop_size", "n_eff"),
-                       keyby = .(essround, cntry)]
+                       keyby = .(essround, selfcomp, cntry)]
 
 # Aggregated dessign effect
 tab_deff_2[, deff := n_resp / n_eff]
@@ -349,11 +349,12 @@ pl_neff <- ggplot(tab_deff_2) +
 
 
 tab_deff_2[, sapply(.SD, class)]
-tab_deff_long_2 <- melt.data.table(data = tab_deff_2,
-                                   id.vars = c("cntry", "essround", "min_n_eff"),
-                                   measure.vars = c("pop_size", "n_variable",
-                                                    "n_domains",
-                                                    "n_resp", "deff", "n_eff"))
+tab_deff_long_2 <- melt.data.table(
+  data = tab_deff_2,
+  id.vars = c("cntry", "essround", "selfcomp", "min_n_eff"),
+  measure.vars = c("pop_size", "n_variable", "n_domains",
+                   "n_resp", "deff", "n_eff")
+)
 
 tab_deff_2
 tab_deff_long_2
@@ -406,23 +407,27 @@ pl_ICC_var_type <- ggplot(data = tab,
   theme(axis.text.x = element_blank()) +
   ggtitle(label = "Mean ICC by variable type", subtitle = Sys.time())
 
-ggsave(filename = "results/plot_ICC_by_variable_type.pdf",
+ggsave(filename = "plots/plot_ICC_by_variable_type.pdf",
        plot = pl_ICC_var_type, width = 16, height = 9)
-ggsave(filename = "results/plot_ICC_by_variable_type.png",
+ggsave(filename = "plots/plot_ICC_by_variable_type.png",
        plot = pl_ICC_var_type, width = 16, height = 9)
 
 # Save for all countries ###
 
-write.xlsx(list("deff_cntry" = tab_deff_2,
-                "deff_cntry_domain" = tab_deff,
-                "deff_cntry_domain_variable" = dat_deff,
-                "deff_cntry_domain_variable_all" = tab_variables),
-           file = "results/ESS_dat_deff.xlsx",
-           colWidths = "auto", firstRow = T,
-           headerStyle = createStyle(textDecoration = "italic",
-                                     halign = "center"))
+dir.create(file.path("results", Sys.Date()))
 
-cairo_pdf("results/ESS_plot_deff.pdf", width = 16, height = 9, onefile = T)
+write.xlsx(
+  x = list("deff_cntry" = tab_deff_2,
+           "deff_cntry_domain" = tab_deff,
+           "deff_cntry_domain_variable" = dat_deff),
+  file = glue::glue("results/{Sys.Date()}/ESS_dat_deff_{Sys.Date()}.xlsx"),
+  colWidths = "auto", firstRow = T,
+  headerStyle = createStyle(textDecoration = "italic",
+                            halign = "center")
+)
+
+cairo_pdf(glue::glue("results/{Sys.Date()}/ESS_plot_deff_{Sys.Date()}.pdf"),
+          width = 16, height = 9, onefile = T)
 print(pl_neff)
 print(pl_deff)
 print(pl_deff_p)
@@ -432,41 +437,41 @@ print(pl_ICC)
 dev.off()
 
 
-export_cntry_results <- function(x) {
-  cat(x, "\n")
-
-  fname.xlsx <- paste0("results/cntry/ESS-results-", x, ".xlsx")
-  fname.pdf <- sub("xlsx", "pdf", fname.xlsx)
-
-  write.xlsx(list("deff_cntry" = tab_deff_2[cntry == x],
-                  "deff_cntry_domain" = tab_deff[cntry == x],
-                  "deff_cntry_domain_variable" = dat_deff[cntry == x],
-                  "deff_cntry_domain_variable_all" = tab_variables[cntry == x]),
-             file = fname.xlsx,
-             colWidths = "auto", firstRow = T,
-             headerStyle = createStyle(textDecoration = "italic",
-                                       halign = "center"))
-
-  cairo_pdf(fname.pdf, width = 16, height = 9, onefile = T)
-  print(plot_cntry_dashboard_2(x))
-  print(plot_cntry_dashboard(x))
-  print(plot_ICC_varname_domain(x))
-  dev.off()
-}
-
-# export_cntry_results("LV")
-
-dir.create(path = "results/cntry", showWarnings = F)
-
-for (i in cntry_list) {
-  cat(i, ": ")
-  export_cntry_results(i)
-}
-
-# list.files(path = "results/cntry", full.names = T)
-
-fname <- "results/ESS-cntry-results.zip"
-if (file.exists(fname)) file.remove(fname)
-zip::zip(zipfile = fname,
-         files = list.files(path = "results/cntry", full.names = T),
-         mode = "cherry-pick")
+# export_cntry_results <- function(x) {
+#   cat(x, "\n")
+#
+#   fname.xlsx <- paste0("results/cntry/ESS-results-", x, ".xlsx")
+#   fname.pdf <- sub("xlsx", "pdf", fname.xlsx)
+#
+#   write.xlsx(list("deff_cntry" = tab_deff_2[cntry == x],
+#                   "deff_cntry_domain" = tab_deff[cntry == x],
+#                   "deff_cntry_domain_variable" = dat_deff[cntry == x],
+#                   "deff_cntry_domain_variable_all" = tab_variables[cntry == x]),
+#              file = fname.xlsx,
+#              colWidths = "auto", firstRow = T,
+#              headerStyle = createStyle(textDecoration = "italic",
+#                                        halign = "center"))
+#
+#   cairo_pdf(fname.pdf, width = 16, height = 9, onefile = T)
+#   print(plot_cntry_dashboard_2(x))
+#   print(plot_cntry_dashboard(x))
+#   print(plot_ICC_varname_domain(x))
+#   dev.off()
+# }
+#
+# # export_cntry_results("LV")
+#
+# dir.create(path = "results/cntry", showWarnings = F)
+#
+# for (i in cntry_list) {
+#   cat(i, ": ")
+#   export_cntry_results(i)
+# }
+#
+# # list.files(path = "results/cntry", full.names = T)
+#
+# fname <- "results/ESS-cntry-results.zip"
+# if (file.exists(fname)) file.remove(fname)
+# zip::zip(zipfile = fname,
+#          files = list.files(path = "results/cntry", full.names = T),
+#          mode = "cherry-pick")

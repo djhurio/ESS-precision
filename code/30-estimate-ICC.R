@@ -6,7 +6,7 @@ gc()
 
 # Load data
 dat2 <- readRDS(file = "data/dat2.rds")
-dat2[, .N, keyby = .(essround, edition, proddate)]
+dat2[, .N, keyby = .(essround, selfcomp, edition, proddate)]
 
 # dat2[cntry == "BG", as.list(summary(dweight)), keyby = .(essround)]
 # dat2[cntry == "BG", .(deff_p = .N * sum(dweight ^ 2) / sum(dweight) ^ 2),
@@ -21,7 +21,7 @@ variables <- readRDS(file = "data/variables.rds")
 round.labels <- unique(dat2$essround) |> sort()
 round.labels
 
-# Average number of respondnets per PSU
+# Average number of respondents per PSU
 dat_b <- dat2[, .N, keyby = .(essround, cntry, domain, PSU)]
 dat_b <- dat_b[, .(b = mean(N)), keyby = .(essround, cntry, domain)]
 
@@ -35,19 +35,63 @@ dat_b[b == 1]
 
 
 # Transfer data to long format
-dat3 <- melt.data.table(data = dat2,
-                        id.vars = c("essround", "cntry", "domain",
-                                    "STR", "PSU", "idno", "dweight",
-                                    "weight_des", "weight_est"),
-                        measure.vars = variables$varname, na.rm = F,
-                        variable.name = "varname", variable.factor = F)
+dat3 <- melt.data.table(
+  data = dat2,
+  id.vars = c("essround", "selfcomp", "cntry", "domain",
+              "STR", "PSU", "idno",
+              "weight_des", "weight_est"),
+  measure.vars = intersect(names(dat2), variables$varname),
+  na.rm = F,
+  variable.name = "varname",
+  variable.factor = F
+)
 
 
 # Add type of variable
+setkey(dat3, varname)
 dat3 <- merge(dat3, variables[, .(varname, type)],
               by = "varname", all.x = T, sort = F)
 dat3[, .N, keyby = .(type)]
 
+# Add flag, if variable should be excluded from the ICC estimation
+variables_long <- melt.data.table(
+  data = variables,
+  id.vars = "varname",
+  measure.vars = patterns("^ESS"),
+  variable.name = "round",
+  value.name = "flag",
+  variable.factor = F,
+  value.factor = F
+)
+
+variables_long[, .N, keyby = .(flag)]
+variables_long[!(flag)]
+
+variables_long[, essround := factor(sub("ESS", "R", sub("SC", "", round)))]
+variables_long[, selfcomp := grepl("SC", round)]
+variables_long[, round := NULL]
+
+setkey(dat3, varname, essround, selfcomp)
+dat3 <- merge(dat3, variables_long,
+              by = c("varname", "essround", "selfcomp"),
+              all.x = T)
+
+dat3[, .N, keyby = .(flag)]
+dat3[!(flag), .N, keyby = .(essround, selfcomp, varname)]
+
+unique(dat3[, .(essround, selfcomp,
+                varname)])[, .(n = .N),
+                           keyby = .(essround, selfcomp)]
+unique(dat3[, .(essround, selfcomp,
+                varname, flag)])[, .(n = sum(flag)),
+                                 keyby = .(essround, selfcomp)]
+
+# Keep only variables used for the ICC estimation
+dat3 <- dat3[(flag)]
+dat3[, flag := NULL]
+unique(dat3[, .(essround, selfcomp,
+                varname)])[, .(n = .N),
+                           keyby = .(essround, selfcomp)]
 
 # Ratio of two totals is used for the estimation
 # Calculate Y and Z values for ratio estimation
@@ -111,22 +155,11 @@ dat3[, .N, keyby = .(varname_ext)]
 
 # Taylor linearisation of ratio of two totals
 # using design weights
-dat3[, total_Y := sum(value_y * weight_des), by = .(varname_ext)]
-dat3[, total_Z := sum(value_z * weight_des), by = .(varname_ext)]
+dat3[, total_Y := sum(value_y * weight_est), by = .(varname_ext)]
+dat3[, total_Z := sum(value_z * weight_est), by = .(varname_ext)]
 dat3[total_Z > 0,
      lin_val := (value_y - total_Y / total_Z * value_z) / total_Z]
 
-# Taylor linearisation of ratio of two totals (inverse prob)
-dat3[, total_Yd := sum(value_y * dweight), by = .(varname_ext)]
-dat3[, total_Zd := sum(value_z * dweight), by = .(varname_ext)]
-dat3[total_Zd > 0,
-     lin_vald := (value_y - total_Yd / total_Zd * value_z) / total_Zd]
-
-dat3[total_Z > 0, cor(lin_val, lin_vald)]
-
-ggplot(data = dat3[total_Z > 0][sample(.N, 1e3)],
-       mapping = aes(x = lin_val, y = lin_vald)) +
-  geom_point()
 
 # PSU variance
 tab_psu <- dat3[!is.na(value), .(n = .N, sd_y_psu = sd(value_y)),
@@ -141,9 +174,9 @@ tab_psu[max_sd_y_psu == 0]
 tab_variables <- dat3[, .(n_resp = .N,
                           n_na = sum(is.na(value)),
                           sd_y = sd(value_y),
-                          pop_size = sum(weight_des),
-                          total_Y  = sum(weight_des * value_y),
-                          total_Z  = sum(weight_des * value_z)),
+                          pop_size = sum(weight_est),
+                          total_Y  = sum(weight_est * value_y),
+                          total_Z  = sum(weight_est * value_z)),
                       keyby = .(varname_ext, essround, cntry, domain,
                                 varname, type)]
 
@@ -243,10 +276,7 @@ estimICC <- function(x) {
   data.table(varname_ext = x,
              ICC = max(0, ICC::ICCbare(x = factor(PSU),
                                        y = lin_val,
-                                       data = dat3[.(x)])),
-             ICCd = max(0, ICC::ICCbare(x = factor(PSU),
-                                        y = lin_vald,
-                                        data = dat3[.(x)])))
+                                       data = dat3[.(x)])))
 }
 
 estimICC(sample(varname_list, 1))
@@ -293,6 +323,8 @@ print(t2 - t1)
 # Time difference of 1.332371 hours (2021-02-05)
 # Time difference of 31.49445 mins  (2022-09-17)
 # Time difference of 33.56024 mins  (2022-12-08)
+# Time difference of 18.51974 mins  (2022-12-11)
+
 
 
 
