@@ -112,7 +112,7 @@ pl_deff_p <- ggplot(dat_deff_p) +
 dat_deff <- merge(tab_variables, dat_ICC,
                   by = "varname_ext", all.x = T)
 
-dat_deff[, .N, keyby = .(flag, b1 = b == 1, is.na(ICC))]
+dat_deff[, .N, keyby = .(flag, b_is_1 = b == 1, naICC = is.na(ICC))]
 
 dat_deff <- merge(dat_deff, dat_deff_p,
                   by = c("essround", "cntry", "domain"), all.x = T)
@@ -128,6 +128,7 @@ dat_deff[!(flag) & b > 1, summary(ICC)]
 dat_deff[(flag) | b == 1, ICC := 0]
 
 dat_deff[, summary(ICC)]
+dat_deff[b > 1, summary(ICC)]
 
 dat_deff[, deff_c := 1 + (b - 1) * ICC]
 
@@ -139,6 +140,7 @@ dat_deff[, deff := deff_p * deff_c]
 dat_deff
 
 dat_deff[, as.list(summary(deff))]
+dat_deff[, as.list(summary(deff)), keyby = .(essround)]
 dat_deff[, as.list(summary(deff)), keyby = .(essround, selfcomp)]
 dat_deff[, as.list(summary(deff)), keyby = .(cntry)][order(Mean)]
 dat_deff[, as.list(summary(deff)), keyby = .(varname)][order(Mean)]
@@ -213,46 +215,63 @@ plot_ICC_varname_domain <- function(x) {
 # Aggregate to round / cntry / domain
 tab_deff <- dat_deff[, c(.(n_variable = as.numeric(.N)),
                          lapply(.SD, mean),
-                         .(ICC_median = median(ICC))),
-                     .SDcols = c("n_resp", "pop_size", "ICC", "b",
-                                 "deff_c", "deff_p", "deff"),
+                         .(ICC = median(ICC))),
+                     .SDcols = c("n_resp", "pop_size", "b", "deff_p"),
                      keyby = .(essround, selfcomp, cntry, domain)]
 
 tab_deff
 tab_deff[, mean(n_variable), keyby = .(essround, selfcomp)]
 tab_deff[, sum(n_variable)]
 
-tab_deff[, all.equal(deff_c, 1 + (b - 1) * ICC)]
-tab_deff[, all.equal(deff, deff_p * deff_c)]
+# tab_deff[, all.equal(deff_c, 1 + (b - 1) * ICC_mean)]
+# tab_deff[, all.equal(deff, deff_p * deff_c)]
+tab_deff[, deff_c := 1 + (b - 1) * ICC]
+tab_deff[, deff := deff_p * deff_c]
 
-# Effective sample should be recalculated
-# as it is not a linear function from deff
+# Effective sample
 tab_deff[, n_eff := n_resp / deff]
 
 
 tab_deff[, summary(ICC)]
-tab_deff[, summary(ICC_median)]
 
-m <- tab_deff[, max(ICC, ICC_median)]
-
-# ICC mean vs ICC median
-pl_ICC_test1 <- ggplot(data = tab_deff[b > 1],
-                       mapping = aes(x = ICC, y = ICC_median)) +
-  geom_point(mapping = aes(colour = cntry)) +
-  geom_abline(slope = 1, intercept = 0) +
-  coord_equal() + xlim(c(0, m)) + ylim(c(0, m)) +
-  ggtitle(label = "ICC: mean vs median", subtitle = Sys.time()) +
-  theme_bw()
-
-pl_ICC_test2 <- pl_ICC_test1 +
-  geom_text(mapping = aes(label = paste(cntry, essround, sep = "_")),
-            alpha = .5)
-
+# m <- tab_deff[, max(ICC_mean, ICC_median)]
+#
+# # ICC mean vs ICC median
+# pl_ICC_test1 <- ggplot(data = tab_deff[b > 1],
+#                        mapping = aes(x = ICC_mean, y = ICC_median)) +
+#   geom_point(mapping = aes(colour = essround)) +
+#   geom_abline(slope = 1, intercept = 0) +
+#   coord_equal() + xlim(c(0, m)) + ylim(c(0, m)) +
+#   ggtitle(label = "ICC: mean vs median", subtitle = Sys.time()) +
+#   theme_bw()
 # pl_ICC_test1
+#
+#
+# id_vars <- c("essround", "cntry", "selfcomp", "domain")
+# tab_ICC_test2 <- melt.data.table(
+#   data = tab_deff[b > 1],
+#   id.vars = id_vars,
+#   measure.vars = patterns("^ICC_")
+# )
+# setkeyv(tab_ICC_test2, c(id_vars, "variable"))
+# key(tab_ICC_test2)
+# tab_ICC_test2[, flag := value[1] < value[2], by = id_vars]
+# tab_ICC_test2[(flag)]
+# pl_ICC_test2 <- ggplot(data = tab_ICC_test2,
+#                        mapping = aes(x = essround,
+#                                      y = value,
+#                                      fill = flag,
+#                                      linetype = variable)) +
+#   geom_col(colour = "black", position = "dodge") +
+#   facet_wrap(facets = vars(paste(cntry, domain))) +
+#   ggtitle(label = "ICC: mean vs median", subtitle = Sys.time()) +
+#   theme_bw()
 # pl_ICC_test2
-
-ggsave(filename = "plots/pl_ICC_test1.png", plot = pl_ICC_test1)
-ggsave(filename = "plots/pl_ICC_test2.png", plot = pl_ICC_test2)
+#
+# ggsave(filename = "plots/pl_ICC_test1.png", plot = pl_ICC_test1,
+#        width = 8, height = 4.5)
+# ggsave(filename = "plots/pl_ICC_test2.png", plot = pl_ICC_test2,
+#        width = 16, height = 9)
 
 pl_ICC <- ggplot(tab_deff) +
   geom_col(aes(x = essround, y = ICC, fill = essround, linetype = domain),
@@ -385,7 +404,6 @@ length(cntry_list)
 
 
 # ICC exploring
-
 dat_deff[, mean(ICC)]
 dat_deff[, mean(ICC), keyby = .(type)]
 
@@ -395,11 +413,11 @@ dcast.data.table(data = dat_deff, formula = essround ~ type,
 dcast.data.table(data = dat_deff, formula = cntry ~ type,
                  fun.aggregate = mean, value.var = "ICC")
 
-tab <- dat_deff[, .(mean_ICC = mean(ICC)),
+tab <- dat_deff[, .(ICC = median(ICC)),
                 keyby = .(essround, cntry, domain, type)]
 
 pl_ICC_var_type <- ggplot(data = tab,
-                          mapping = aes(x = type, y = mean_ICC,
+                          mapping = aes(x = type, y = ICC,
                                         fill = type, linetype = domain)) +
   geom_col(colour = "black", alpha = 1, position = "dodge") +
   facet_grid(essround ~ cntry) +
@@ -414,16 +432,36 @@ ggsave(filename = "plots/plot_ICC_by_variable_type.png",
 
 # Save for all countries ###
 
-dir.create(file.path("results", Sys.Date()))
+dir.create(file.path("results", Sys.Date()), showWarnings = F)
 
+setkey(tab_deff_2, essround, selfcomp, cntry)
+setkey(tab_deff,   essround, selfcomp, cntry, domain)
+setkey(dat_deff,   essround, selfcomp, cntry, domain, type, varname)
+
+setcolorder(tab_deff_2)
+setcolorder(tab_deff)
+setcolorder(dat_deff)
+
+map_chr(tab_deff_2, class)
+map_chr(tab_deff,   class)
+map_chr(dat_deff,   class)
+
+x <- c("n_domains", "n_variable", "n_resp")
+tab_deff_2[, c(x) := map(.SD, as.integer), .SDcols = x]
+
+x <- c("n_variable", "n_resp")
+tab_deff[, c(x) := map(.SD, as.integer), .SDcols = x]
+
+options("openxlsx.numFmt" = "0.000")
 write.xlsx(
   x = list("deff_cntry" = tab_deff_2,
            "deff_cntry_domain" = tab_deff,
            "deff_cntry_domain_variable" = dat_deff),
   file = glue::glue("results/{Sys.Date()}/ESS_dat_deff_{Sys.Date()}.xlsx"),
-  colWidths = "auto", firstRow = T,
   headerStyle = createStyle(textDecoration = "italic",
-                            halign = "center")
+                            halign = "center"),
+  firstRow = T,
+  withFilter = T
 )
 
 cairo_pdf(glue::glue("results/{Sys.Date()}/ESS_plot_deff_{Sys.Date()}.pdf"),
