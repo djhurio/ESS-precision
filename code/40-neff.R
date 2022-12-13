@@ -9,6 +9,7 @@ gc()
 dat2 <- readRDS(file = "data/dat2.rds")
 tab_variables <- readRDS(file = "data/tab_variables.rds")
 dat_ICC <- readRDS(file = "data/dat_ICC.rds")
+tab_cf_cntry <- readRDS("data/tab_cf_cntry.rds")
 
 dat2[, domain := paste0("D", domain)]
 tab_variables[, domain := paste0("D", domain)]
@@ -64,8 +65,7 @@ dat_b[order(b)]
 dat_b[, summary(b)]
 
 pl_b <- ggplot(dat_b) +
-  geom_col(aes(x = essround, y = b,
-               fill = essround, linetype = domain),
+  geom_col(aes(x = essround, y = b, fill = domain),
            colour = "black", position = "dodge") +
   ggtitle(label = "ESS avearge cluster size (b)", subtitle = Sys.time()) +
   facet_wrap(~ cntry) +
@@ -98,8 +98,7 @@ dcast.data.table(data = dat_deff_p, formula = cntry + domain ~ essround,
 # hist(tmp$prob)
 
 pl_deff_p <- ggplot(dat_deff_p) +
-  geom_col(aes(x = essround, y = deff_p,
-               fill = essround, linetype = domain),
+  geom_col(aes(x = essround, y = deff_p, fill = domain),
            colour = "black", position = "dodge") +
   ggtitle(label = paste("ESS design effect due to differencies",
                         "in sampling probabilities (deff_p)"),
@@ -160,21 +159,21 @@ names(dat_deff)
 dat_deff[, n_eff := n_resp / deff]
 
 
-plot_ICC_varname_domain <- function(x) {
-  ggplot(data = dat_deff[cntry == x],
-         mapping = aes(x = essround, y = ICC, fill = ICC, linetype = domain)) +
-    geom_col(colour = "black", position = "dodge") +
-    geom_hline(yintercept = 0) +
-    scale_fill_gradient2(low  = scales::muted("blue"),
-                         mid  = "white",
-                         high = scales::muted("red")) +
-    facet_wrap(~ varname) +
-    ggtitle(label = paste("Intraclass correlation coefficient (ICC or ρ)",
-                          "by variable for", x),
-            subtitle = Sys.time()) +
-    theme_bw()
-}
-
+# plot_ICC_varname_domain <- function(x) {
+#   ggplot(data = dat_deff[cntry == x],
+#          mapping = aes(x = essround, y = ICC, fill = ICC, linetype = domain)) +
+#     geom_col(colour = "black", position = "dodge") +
+#     geom_hline(yintercept = 0) +
+#     scale_fill_gradient2(low  = scales::muted("blue"),
+#                          mid  = "white",
+#                          high = scales::muted("red")) +
+#     facet_wrap(~ varname) +
+#     ggtitle(label = paste("Intraclass correlation coefficient (ICC or ρ)",
+#                           "by variable for", x),
+#             subtitle = Sys.time()) +
+#     theme_bw()
+# }
+#
 # plot_ICC_varname_domain("FI")
 # plot_ICC_varname_domain("BG")
 # plot_ICC_varname_domain("LT")
@@ -274,7 +273,7 @@ tab_deff[, summary(ICC)]
 #        width = 16, height = 9)
 
 pl_ICC <- ggplot(tab_deff) +
-  geom_col(aes(x = essround, y = ICC, fill = essround, linetype = domain),
+  geom_col(aes(x = essround, y = ICC, fill = domain),
            colour = "black", position = "dodge") +
   ggtitle(label = "ESS Intraclass correlation coefficient (ICC or ρ)",
           subtitle = Sys.time()) +
@@ -282,26 +281,33 @@ pl_ICC <- ggplot(tab_deff) +
   theme_bw()
 
 pl_deff_c <- ggplot(tab_deff) +
-  geom_col(aes(x = essround, y = deff_c,
-               fill = essround, linetype = domain),
+  geom_col(aes(x = essround, y = deff_c, fill = domain),
            colour = "black", position = "dodge") +
   ggtitle(label = "ESS design effect due to clustering (deff_c)",
           subtitle = Sys.time()) +
   facet_wrap(~ cntry) +
   theme_bw()
 
-tab_deff[, sapply(.SD, class)]
-tab_deff_long <- melt.data.table(data = tab_deff, id.vars = key(tab_deff))
+pl_deff_by_dom <- ggplot(tab_deff) +
+  geom_col(aes(x = essround, y = deff, fill = domain),
+           colour = "black", position = "dodge") +
+  ggtitle(label = "ESS design effect (deff) by domains",
+          subtitle = Sys.time()) +
+  facet_wrap(~ cntry) +
+  theme_bw()
 
-plot_cntry_dashboard <- function(x) {
-  ggplot(data = tab_deff_long[cntry == x],
-         mapping = aes(x = essround, y = value, fill = essround,
-                       linetype = domain)) +
-    geom_col(colour = "black", alpha = .5, position = "dodge") +
-    facet_wrap(~ variable, scales = "free_y") +
-    ggtitle(paste("Sample design dashboard for", x, "by domain")) +
-    theme_bw()
-}
+# tab_deff[, sapply(.SD, class)]
+# tab_deff_long <- melt.data.table(data = tab_deff, id.vars = key(tab_deff))
+#
+# plot_cntry_dashboard <- function(x) {
+#   ggplot(data = tab_deff_long[cntry == x],
+#          mapping = aes(x = essround, y = value, fill = essround,
+#                        linetype = domain)) +
+#     geom_col(colour = "black", alpha = .5, position = "dodge") +
+#     facet_wrap(~ variable, scales = "free_y") +
+#     ggtitle(paste("Sample design dashboard for", x, "by domain")) +
+#     theme_bw()
+# }
 
 # plot_cntry_dashboard("FI")
 # plot_cntry_dashboard("BG")
@@ -318,8 +324,21 @@ tab_deff_2 <- tab_deff[, c(.(n_domains = as.numeric(.N),
                        .SDcols = c("n_resp", "pop_size", "n_eff"),
                        keyby = .(essround, selfcomp, cntry)]
 
+key(tab_cf_cntry)
+key(tab_deff_2)
+
+tab_deff_2 <- merge(tab_cf_cntry, tab_deff_2, all = T)
+
+if (tab_deff_2[, !isTRUE(all.equal(n_net, n_resp))]) {
+  stop("Number of respondents do not match")
+}
+
+tab_deff_2[, n_resp := NULL]
+setnames(tab_deff, "n_resp", "n_net")
+
+
 # Aggregated dessign effect
-tab_deff_2[, deff := n_resp / n_eff]
+tab_deff_2[, deff := n_net / n_eff]
 
 # Min effective sample size
 tab_deff_2[, min_n_eff := ifelse(pop_size < 2e6, 800L, 1500L)]
@@ -327,17 +346,44 @@ tab_deff_2[, min_n_eff := ifelse(pop_size < 2e6, 800L, 1500L)]
 # Evaluation
 tab_deff_2[, assessment := (n_eff >= min_n_eff)]
 
+tab_deff_2[, rr_assess := (rr > 0.70)]
+
+pl_n_gross <- ggplot(tab_deff_2) +
+  geom_col(aes(x = essround, y = n_gross), colour = "black") +
+  ggtitle(label = "ESS gross sample size (n_gross)", subtitle = Sys.time()) +
+  facet_wrap(~ cntry) +
+  theme_bw()
+
+pl_n_net <- ggplot(tab_deff_2) +
+  geom_col(aes(x = essround, y = n_net), colour = "black") +
+  ggtitle(label = "ESS net sample size (n_net)", subtitle = Sys.time()) +
+  facet_wrap(~ cntry) +
+  theme_bw()
+
+pl_rr <- ggplot(tab_deff_2[!is.na(rr)]) +
+  geom_hline(yintercept = 0.70, colour = "red") +
+  geom_col(aes(x = essround, y = rr, fill = rr_assess), colour = "black") +
+  scale_fill_manual(values = c("#D95F02", "#1B9E77")) +
+  ggtitle(label = "ESS response rate (rr)", subtitle = Sys.time()) +
+  facet_wrap(~ cntry) +
+  theme_bw()
+
+pl_ri <- ggplot(tab_deff_2[!is.na(ri)]) +
+  geom_col(aes(x = essround, y = ri), colour = "black") +
+  ggtitle(label = "ESS ineligibility rate (ri)", subtitle = Sys.time()) +
+  facet_wrap(~ cntry) +
+  theme_bw()
+
 pl_deff <- ggplot(tab_deff_2) +
-  geom_col(aes(x = essround, y = deff, fill = essround),
-           colour = "black", position = "dodge") +
+  geom_col(aes(x = essround, y = deff), colour = "black") +
   ggtitle(label = "ESS design effect (deff)", subtitle = Sys.time()) +
   facet_wrap(~ cntry) +
   theme_bw()
 
 pl_neff <- ggplot(tab_deff_2) +
-  geom_col(aes(x = essround, y = n_eff, fill = assessment),
-           colour = "black", position = "dodge") +
-  geom_hline(mapping = aes(yintercept = min_n_eff)) +
+  geom_hline(mapping = aes(yintercept = min_n_eff), colour = "red") +
+  geom_col(aes(x = essround, y = n_eff, fill = assessment), colour = "black") +
+  scale_fill_manual(values = c("#D95F02", "#1B9E77")) +
   ggtitle(label = "ESS effective sample size (n_eff)", subtitle = Sys.time()) +
   facet_wrap(~ cntry) +
   theme_bw()
@@ -367,28 +413,28 @@ pl_neff <- ggplot(tab_deff_2) +
 #   ggtitle("ESS total effective sample size (n_eff)")
 
 
-tab_deff_2[, sapply(.SD, class)]
-tab_deff_long_2 <- melt.data.table(
-  data = tab_deff_2,
-  id.vars = c("cntry", "essround", "selfcomp", "min_n_eff"),
-  measure.vars = c("pop_size", "n_variable", "n_domains",
-                   "n_resp", "deff", "n_eff")
-)
-
-tab_deff_2
-tab_deff_long_2
-
-plot_cntry_dashboard_2 <- function(x) {
-  ggplot(data = tab_deff_long_2[cntry == x],
-         mapping = aes(x = essround, y = value, fill = essround)) +
-    geom_col(colour = "black", alpha = .5, position = "dodge") +
-    geom_hline(mapping = aes(yintercept = min_n_eff),
-               data = tab_deff_long_2[cntry == x & variable == "n_eff"]) +
-    facet_wrap(~ variable, scales = "free_y") +
-    ggtitle(label = paste("Sample design dashboard for", x),
-            subtitle = Sys.time()) +
-    theme_bw()
-}
+# tab_deff_2[, sapply(.SD, class)]
+# tab_deff_long_2 <- melt.data.table(
+#   data = tab_deff_2,
+#   id.vars = c("cntry", "essround", "selfcomp", "min_n_eff"),
+#   measure.vars = c("pop_size", "n_variable", "n_domains",
+#                    "n_net", "deff", "n_eff")
+# )
+#
+# tab_deff_2
+# tab_deff_long_2
+#
+# plot_cntry_dashboard_2 <- function(x) {
+#   ggplot(data = tab_deff_long_2[cntry == x],
+#          mapping = aes(x = essround, y = value, fill = essround)) +
+#     geom_col(colour = "black", alpha = .5, position = "dodge") +
+#     geom_hline(mapping = aes(yintercept = min_n_eff),
+#                data = tab_deff_long_2[cntry == x & variable == "n_eff"]) +
+#     facet_wrap(~ variable, scales = "free_y") +
+#     ggtitle(label = paste("Sample design dashboard for", x),
+#             subtitle = Sys.time()) +
+#     theme_bw()
+# }
 
 # plot_cntry_dashboard_2("FI")
 # plot_cntry_dashboard_2("BG")
@@ -446,10 +492,10 @@ map_chr(tab_deff_2, class)
 map_chr(tab_deff,   class)
 map_chr(dat_deff,   class)
 
-x <- c("n_domains", "n_variable", "n_resp")
+x <- c("n_domains", "n_variable", "n_net")
 tab_deff_2[, c(x) := map(.SD, as.integer), .SDcols = x]
 
-x <- c("n_variable", "n_resp")
+x <- c("n_variable", "n_net")
 tab_deff[, c(x) := map(.SD, as.integer), .SDcols = x]
 
 options("openxlsx.numFmt" = "0.000")
@@ -466,12 +512,15 @@ write.xlsx(
 
 cairo_pdf(glue::glue("results/{Sys.Date()}/ESS_plot_deff_{Sys.Date()}.pdf"),
           width = 16, height = 9, onefile = T)
-print(pl_neff)
-print(pl_deff)
-print(pl_deff_p)
-print(pl_deff_c)
+print(pl_rr)
+print(pl_ri)
 print(pl_b)
 print(pl_ICC)
+print(pl_deff_c)
+print(pl_deff_p)
+print(pl_deff_by_dom)
+print(pl_deff)
+print(pl_neff)
 dev.off()
 
 
