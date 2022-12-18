@@ -1,9 +1,12 @@
 # Calculate effective sample size (n_eff)
+library(openxlsx2)
 
 # Reset
 rm(list = ls())
 gc()
 
+# Set ggplot2 theme
+theme_set(theme_bw())
 
 # Load data
 dat2 <- readRDS(file = "data/dat2.rds")
@@ -68,8 +71,7 @@ pl_b <- ggplot(dat_b) +
   geom_col(aes(x = essround, y = b, fill = domain),
            colour = "black", position = "dodge") +
   ggtitle(label = "ESS avearge cluster size (b)", subtitle = Sys.time()) +
-  facet_wrap(~ cntry) +
-  theme_bw()
+  facet_wrap(~ cntry)
 
 
 # deff_p
@@ -103,8 +105,7 @@ pl_deff_p <- ggplot(dat_deff_p) +
   ggtitle(label = paste("ESS design effect due to differencies",
                         "in sampling probabilities (deff_p)"),
           subtitle = Sys.time()) +
-  facet_wrap(~ cntry) +
-  theme_bw()
+  facet_wrap(~ cntry)
 
 
 # Merge
@@ -170,8 +171,7 @@ dat_deff[, n_eff := n_resp / deff]
 #     facet_wrap(~ varname) +
 #     ggtitle(label = paste("Intraclass correlation coefficient (ICC or ρ)",
 #                           "by variable for", x),
-#             subtitle = Sys.time()) +
-#     theme_bw()
+#             subtitle = Sys.time())
 # }
 #
 # plot_ICC_varname_domain("FI")
@@ -201,8 +201,7 @@ dat_deff[, n_eff := n_resp / deff]
 #     scale_fill_manual(values = c("TRUE"  = "blue",
 #                                  "FALSE" = "red")) +
 #     facet_wrap(~ varname) +
-#     ggtitle(paste("Effective sample size by variable for", x)) +
-#     theme_bw()
+#     ggtitle(paste("Effective sample size by variable for", x))
 # }
 #
 # plot_neff_varname("FI")
@@ -241,8 +240,7 @@ tab_deff[, summary(ICC)]
 #   geom_point(mapping = aes(colour = essround)) +
 #   geom_abline(slope = 1, intercept = 0) +
 #   coord_equal() + xlim(c(0, m)) + ylim(c(0, m)) +
-#   ggtitle(label = "ICC: mean vs median", subtitle = Sys.time()) +
-#   theme_bw()
+#   ggtitle(label = "ICC: mean vs median", subtitle = Sys.time())
 # pl_ICC_test1
 #
 #
@@ -263,8 +261,7 @@ tab_deff[, summary(ICC)]
 #                                      linetype = variable)) +
 #   geom_col(colour = "black", position = "dodge") +
 #   facet_wrap(facets = vars(paste(cntry, domain))) +
-#   ggtitle(label = "ICC: mean vs median", subtitle = Sys.time()) +
-#   theme_bw()
+#   ggtitle(label = "ICC: mean vs median", subtitle = Sys.time())
 # pl_ICC_test2
 #
 # ggsave(filename = "plots/pl_ICC_test1.png", plot = pl_ICC_test1,
@@ -277,24 +274,21 @@ pl_ICC <- ggplot(tab_deff) +
            colour = "black", position = "dodge") +
   ggtitle(label = "ESS Intraclass correlation coefficient (ICC or ρ)",
           subtitle = Sys.time()) +
-  facet_wrap(~ cntry) +
-  theme_bw()
+  facet_wrap(~ cntry)
 
 pl_deff_c <- ggplot(tab_deff) +
   geom_col(aes(x = essround, y = deff_c, fill = domain),
            colour = "black", position = "dodge") +
   ggtitle(label = "ESS design effect due to clustering (deff_c)",
           subtitle = Sys.time()) +
-  facet_wrap(~ cntry) +
-  theme_bw()
+  facet_wrap(~ cntry)
 
 pl_deff_by_dom <- ggplot(tab_deff) +
   geom_col(aes(x = essround, y = deff, fill = domain),
            colour = "black", position = "dodge") +
   ggtitle(label = "ESS design effect (deff) by domains",
           subtitle = Sys.time()) +
-  facet_wrap(~ cntry) +
-  theme_bw()
+  facet_wrap(~ cntry)
 
 # tab_deff[, sapply(.SD, class)]
 # tab_deff_long <- melt.data.table(data = tab_deff, id.vars = key(tab_deff))
@@ -305,8 +299,7 @@ pl_deff_by_dom <- ggplot(tab_deff) +
 #                        linetype = domain)) +
 #     geom_col(colour = "black", alpha = .5, position = "dodge") +
 #     facet_wrap(~ variable, scales = "free_y") +
-#     ggtitle(paste("Sample design dashboard for", x, "by domain")) +
-#     theme_bw()
+#     ggtitle(paste("Sample design dashboard for", x, "by domain"))
 # }
 
 # plot_cntry_dashboard("FI")
@@ -351,56 +344,50 @@ tab_deff_2[, rr_assess := (rr > 0.70)]
 pl_n_gross <- ggplot(tab_deff_2) +
   geom_col(aes(x = essround, y = n_gross), colour = "black") +
   ggtitle(label = "ESS gross sample size (n_gross)", subtitle = Sys.time()) +
-  facet_wrap(~ cntry) +
-  theme_bw()
+  facet_wrap(~ cntry)
 
 pl_n_net <- ggplot(tab_deff_2) +
   geom_col(aes(x = essround, y = n_net), colour = "black") +
   ggtitle(label = "ESS net sample size (n_net)", subtitle = Sys.time()) +
-  facet_wrap(~ cntry) +
-  theme_bw()
+  facet_wrap(~ cntry)
 
 pl_rr <- ggplot(tab_deff_2[!is.na(rr)]) +
   geom_hline(yintercept = 0.70, colour = "red") +
   geom_col(aes(x = essround, y = rr, fill = rr_assess), colour = "black") +
   scale_fill_manual(values = c("#D95F02", "#1B9E77")) +
   ggtitle(label = "ESS response rate (rr)", subtitle = Sys.time()) +
-  facet_wrap(~ cntry) +
-  theme_bw()
+  facet_wrap(~ cntry)
 
 pl_ri <- ggplot(tab_deff_2[!is.na(ri)]) +
   geom_col(aes(x = essround, y = ri), colour = "black") +
   ggtitle(label = "ESS ineligibility rate (ri)", subtitle = Sys.time()) +
-  facet_wrap(~ cntry) +
-  theme_bw()
+  facet_wrap(~ cntry)
 
 pl_deff <- ggplot(tab_deff_2) +
   geom_col(aes(x = essround, y = deff), colour = "black") +
   ggtitle(label = "ESS design effect (deff)", subtitle = Sys.time()) +
-  facet_wrap(~ cntry) +
-  theme_bw()
+  facet_wrap(~ cntry)
 
 pl_neff <- ggplot(tab_deff_2) +
   geom_hline(mapping = aes(yintercept = min_n_eff), colour = "red") +
   geom_col(aes(x = essround, y = n_eff, fill = assessment), colour = "black") +
   scale_fill_manual(values = c("#D95F02", "#1B9E77")) +
   ggtitle(label = "ESS effective sample size (n_eff)", subtitle = Sys.time()) +
-  facet_wrap(~ cntry) +
-  theme_bw()
+  facet_wrap(~ cntry)
 
 
-# # Aggregate to round
-# tab_deff_3 <- tab_deff_2[, c(.(n_cntries = .N), lapply(.SD, sum)),
-#                          .SDcols = c("n_domains", "n_resp", "pop_size",
-#                                      "n_eff", "min_n_eff"),
-#                          keyby = .(essround)]
-#
-# # Aggregated dessign effect
-# tab_deff_3[, deff := n_resp / n_eff]
-#
-# # Evaluation
-# tab_deff_3[, assessment := (n_eff >= min_n_eff)]
-#
+# Aggregate to round
+tab_deff_3 <- tab_deff_2[, c(.(n_cntries = .N), lapply(.SD, sum)),
+                         .SDcols = c("pop_size", "n_gross", "n_net",
+                                     "n_eff", "min_n_eff"),
+                         keyby = .(essround)]
+
+# Aggregated dessign effect
+tab_deff_3[, deff := n_net / n_eff]
+
+# Evaluation
+tab_deff_3[, assessment := (n_eff >= min_n_eff)]
+
 # pl_deff_ess <- ggplot(tab_deff_3) +
 #   geom_col(aes(x = essround, y = deff, fill = essround),
 #            colour = "black", position = "dodge") +
@@ -411,6 +398,32 @@ pl_neff <- ggplot(tab_deff_2) +
 #            colour = "black", position = "dodge") +
 #   geom_hline(mapping = aes(yintercept = min_n_eff, colour = essround)) +
 #   ggtitle("ESS total effective sample size (n_eff)")
+
+tab_deff_3[, sapply(.SD, class)]
+x <- names(tab_deff_3)[map_lgl(tab_deff_3, is.integer)]
+tab_deff_3[, c(x) := map(.SD, as.double), .SDcols = x]
+rm(x)
+tab_deff_3[, sapply(.SD, class)]
+
+tab_deff_long_3 <- melt.data.table(
+  data = tab_deff_3,
+  id.vars = c("essround", "assessment")
+)
+
+tab_deff_3
+tab_deff_long_3
+
+pl_round <- ggplot(
+  data = tab_deff_long_3[grep("n_gross|n_net|n_eff|min_n_eff", variable)],
+  mapping = aes(x = essround, y = value, fill = variable)
+) +
+  geom_col(colour = "black", position = "dodge") +
+  geom_label(mapping = aes(x = essround, y = n_net, label = round(deff, 3)),
+             data = tab_deff_3,
+             vjust = -1,
+             inherit.aes = F) +
+  scale_y_continuous(labels = \(x) formatC(x, big.mark = ",", format = "d")) +
+  ggtitle(label = "ESS total sample size (bars) and deff (numbers)")
 
 
 # tab_deff_2[, sapply(.SD, class)]
@@ -432,8 +445,7 @@ pl_neff <- ggplot(tab_deff_2) +
 #                data = tab_deff_long_2[cntry == x & variable == "n_eff"]) +
 #     facet_wrap(~ variable, scales = "free_y") +
 #     ggtitle(label = paste("Sample design dashboard for", x),
-#             subtitle = Sys.time()) +
-#     theme_bw()
+#             subtitle = Sys.time())
 # }
 
 # plot_cntry_dashboard_2("FI")
@@ -442,8 +454,8 @@ pl_neff <- ggplot(tab_deff_2) +
 # plot_cntry_dashboard_2("LV")
 
 
-cntry_list <- sort(unique(dat_deff$cntry))
-length(cntry_list)
+# cntry_list <- sort(unique(dat_deff$cntry))
+# length(cntry_list)
 
 
 
@@ -467,7 +479,6 @@ pl_ICC_var_type <- ggplot(data = tab,
                                         fill = type, linetype = domain)) +
   geom_col(colour = "black", alpha = 1, position = "dodge") +
   facet_grid(essround ~ cntry) +
-  theme_bw() +
   theme(axis.text.x = element_blank()) +
   ggtitle(label = "Mean ICC by variable type", subtitle = Sys.time())
 
@@ -492,26 +503,110 @@ map_chr(tab_deff_2, class)
 map_chr(tab_deff,   class)
 map_chr(dat_deff,   class)
 
-x <- c("n_domains", "n_variable", "n_net")
-tab_deff_2[, c(x) := map(.SD, as.integer), .SDcols = x]
+# x <- c("n_domains", "n_variable", "n_net")
+# tab_deff_2[, c(x) := map(.SD, as.integer), .SDcols = x]
+#
+# x <- c("n_variable", "n_net")
+# tab_deff[, c(x) := map(.SD, as.integer), .SDcols = x]
 
-x <- c("n_variable", "n_net")
-tab_deff[, c(x) := map(.SD, as.integer), .SDcols = x]
+# options("openxlsx.numFmt" = "0.000")
+# write.xlsx(
+#   x = list("deff_round" = tab_deff_3,
+#            "deff_cntry" = tab_deff_2,
+#            "deff_domain" = tab_deff,
+#            "deff_variable" = dat_deff),
+#   file = glue::glue("results/{Sys.Date()}/ESS_dat_deff_{Sys.Date()}.xlsx"),
+#   headerStyle = createStyle(textDecoration = "italic",
+#                             halign = "center"),
+#   firstRow = T,
+#   withFilter = T
+# )
+#
+# options("openxlsx2.numFmt" = "0.000")
+# openxlsx2::write_xlsx(
+#   x = list("deff_round" = tab_deff_3,
+#            "deff_cntry" = tab_deff_2,
+#            "deff_domain" = tab_deff,
+#            "deff_variable" = dat_deff),
+#   file = glue::glue("results/{Sys.Date()}/ESS_dat_deff_{Sys.Date()}.xlsx"),
+#   headerStyle = createStyle(textDecoration = "italic",
+#                             halign = "center"),
+#   firstRow = T,
+#   withFilter = T
+# )
 
-options("openxlsx.numFmt" = "0.000")
-write.xlsx(
-  x = list("deff_cntry" = tab_deff_2,
-           "deff_cntry_domain" = tab_deff,
-           "deff_cntry_domain_variable" = dat_deff),
-  file = glue::glue("results/{Sys.Date()}/ESS_dat_deff_{Sys.Date()}.xlsx"),
-  headerStyle = createStyle(textDecoration = "italic",
-                            halign = "center"),
-  firstRow = T,
-  withFilter = T
+
+cell_formats <- list(
+  n_cntries     = list(numfmt = "0",       widths = 8.43),
+  n_domains     = list(numfmt = "0",       widths = 8.43),
+  n_variable    = list(numfmt = "0",       widths = 8.43),
+  pop_size      = list(numfmt = "#,##0",   widths = "auto"),
+  total_Y       = list(numfmt = "#,##0",   widths = "auto"),
+  total_Z       = list(numfmt = "#,##0",   widths = "auto"),
+  n_gross       = list(numfmt = "0",       widths = 8.43),
+  n_ineligibles = list(numfmt = "0",       widths = 8.43),
+  n_resp        = list(numfmt = "0",       widths = 8.43),
+  n_na          = list(numfmt = "0",       widths = 8.43),
+  n_net         = list(numfmt = "0",       widths = 8.43),
+  n_eff         = list(numfmt = "0",       widths = 8.43),
+  min_n_eff     = list(numfmt = "0",       widths = 8.43),
+  sd_y          = list(numfmt = "0.000",   widths = 8.43),
+  max_sd_y_psu  = list(numfmt = "0.000",   widths = 8.43),
+  ratio         = list(numfmt = "0.000",   widths = 8.43),
+  rr            = list(numfmt = "0.000",   widths = 8.43),
+  ri            = list(numfmt = "0.000",   widths = 8.43),
+  b             = list(numfmt = "0.000",   widths = 8.43),
+  ICC           = list(numfmt = "0.000",   widths = 8.43),
+  deff_c        = list(numfmt = "0.000",   widths = 8.43),
+  deff_p        = list(numfmt = "0.000",   widths = 8.43),
+  deff          = list(numfmt = "0.000",   widths = 8.43),
+  assessment    = list(numfmt = "BOOLEAN", widths = 8.43),
+  selfcomp      = list(numfmt = "BOOLEAN", widths = 8.43),
+  rr_assess     = list(numfmt = "BOOLEAN", widths = 8.43),
+  type          = list(numfmt = "@",       widths = "auto"),
+  varname_ext   = list(numfmt = "@",       widths = "auto"),
+  flag          = list(numfmt = "@",       widths = "auto")
 )
+
+cell_formats[["flag"]]
+
+wb_data <- list(round    = tab_deff_3,
+                cntry    = tab_deff_2,
+                domain   = tab_deff,
+                variable = dat_deff)
+
+wb <- wb_workbook(creator = Sys.info()[["user"]])
+
+for (x in names(wb_data)) {
+  dat_x <- wb_data[[x]]
+  n <- dat_x[, .N]
+  wb$
+    add_worksheet(sheet = x, zoom = 110)$
+    add_data_table(sheet = x, dat_x)$
+    freeze_pane(sheet = x, firstRow = TRUE)
+  for (i in seq_along(dat_x)) {
+    if (names(dat_x)[i] %in% names(cell_formats)) {
+      wb$
+        add_numfmt(sheet = x,
+                   dims = paste0(int2col(i), c(1, n) + 1, collapse = ":"),
+                   numfmt = cell_formats[[names(dat_x)[i]]]$numfmt)$
+        set_col_widths(sheet = x,
+                       cols = i,
+                       widths = cell_formats[[names(dat_x)[i]]]$widths)
+    }
+  }
+}
+
+wb_save(
+  wb = wb,
+  path = glue::glue("results/{Sys.Date()}/ESS_dat_deff_{Sys.Date()}.xlsx"),
+  overwrite = T
+)
+
 
 cairo_pdf(glue::glue("results/{Sys.Date()}/ESS_plot_deff_{Sys.Date()}.pdf"),
           width = 16, height = 9, onefile = T)
+print(pl_round)
 print(pl_rr)
 print(pl_ri)
 print(pl_b)
