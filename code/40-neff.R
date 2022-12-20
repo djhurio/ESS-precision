@@ -217,6 +217,13 @@ tab_deff <- dat_deff[, c(.(n_variable = as.numeric(.N)),
                      .SDcols = c("n_resp", "pop_size", "b", "deff_p"),
                      keyby = .(essround, selfcomp, cntry, domain)]
 
+tab_deff <- merge(
+  x = tab_cf_cntry[, .(essround, selfcomp, cntry, typesamp)],
+  y = tab_deff,
+  by = c("essround", "selfcomp", "cntry"),
+  all = TRUE
+)
+
 tab_deff
 tab_deff[, mean(n_variable), keyby = .(essround, selfcomp)]
 tab_deff[, sum(n_variable)]
@@ -563,6 +570,7 @@ cell_formats <- list(
   assessment    = list(numfmt = "BOOLEAN", widths = 8.43),
   selfcomp      = list(numfmt = "BOOLEAN", widths = 8.43),
   rr_assess     = list(numfmt = "BOOLEAN", widths = 8.43),
+  typesamp      = list(numfmt = "@",       widths = "auto"),
   type          = list(numfmt = "@",       widths = "auto"),
   varname_ext   = list(numfmt = "@",       widths = "auto"),
   flag          = list(numfmt = "@",       widths = "auto")

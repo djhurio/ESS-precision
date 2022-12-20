@@ -36,7 +36,8 @@ x <- list.files(path = "data-ess/CF",
 dat_cf <- map(.x = x, .f = fread) |> rbindlist(use.names = T, fill = T)
 rm(x)
 
-dat_cf <- dat_cf[, .(name, essround, edition, proddate, cntry, idno, foutcod)]
+dat_cf <- dat_cf[, .(name, essround, edition, proddate, cntry, typesamp,
+                     idno, foutcod)]
 gc()
 
 dat_cf[, .N, keyby = .(name, essround, edition, proddate)]
@@ -65,6 +66,14 @@ dcast.data.table(
   fun.aggregate = length
 )
 
+# Type of the sample
+dat_cf[, typesamp := factor(
+  x = typesamp,
+  levels = 1:3,
+  labels = c("Individual person", "Household", "Address")
+)]
+
+dat_cf[, .N, keyby = .(typesamp)]
 
 # Respondents
 dat <- readRDS("data/dat2.rds")
@@ -105,12 +114,15 @@ dcast.data.table(
 
 
 # Sample size, ri, and rr
-tab_cf_cntry <- dat[, .(n_gross = .N,
+tab_cf_cntry <- dat[, .(typesamp = paste(unique(typesamp), collapse = "|"),
+                        n_gross = .N,
                         n_net = sum(resp),
                         n_ineligibles = sum(outcome == 3)),
                     keyby = .(essround, selfcomp, cntry)]
 tab_cf_cntry
 map_chr(tab_cf_cntry, class)
+
+anyDuplicated(tab_cf_cntry, by = c("essround", "cntry"))
 
 # Outcome codes are not available for all rounds
 tab_cf_cntry[, flag := sum(n_ineligibles) == 0L, by = .(essround, selfcomp)]
