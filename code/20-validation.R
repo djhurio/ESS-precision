@@ -12,8 +12,19 @@ dat <- readRDS(file = "data/dat.rds")
 # str(dat$domain)
 dat[, domain := as.integer(domain)]
 dat[, .N, keyby = .(domain)]
-dat[is.na(domain), domain := 1L]
+dat[is.na(domain), domain := 0L]
 dat[, .N, keyby = .(domain)]
+
+# count of domains
+dat[, dom_n := length(unique(domain)), by = .(essround, cntry)]
+dat[, .N, keyby = .(dom_n)]
+dat[, .N, keyby = .(dom_n, domain)]
+dat[, .N, keyby = .(dom_n, domain, essround)]
+
+dat[dom_n == 1L, domain := 0L]
+dat[, .N, keyby = .(domain)]
+dat[, dom_n := NULL]
+
 dcast.data.table(dat, essround ~ domain, fun.aggregate = length)
 
 if (anyDuplicated(dat, by = c("essround", "cntry", "idno"))) {
@@ -174,6 +185,7 @@ tmp[abs(dweight - dweight2) > .1, .N, keyby = .(dweight2 > dweight)]
 
 
 # dat2[, weight_des := dw]
+dat2[, dw := NULL]
 
 dat2[!is.na(anweight), .(anweight, pspwght * pweight)]
 dat2[!is.na(anweight), all.equal(anweight, pspwght * pweight)]
@@ -188,10 +200,11 @@ dat2[!is.na(pspwght), weight_est := pspwght * pweight * 10e3]
 dat2[ is.na(pspwght), weight_est := weight_des]
 
 dat2[, lapply(.SD, sum), .SDcols = c("weight_des", "weight_est"),
-     keyby = .(essround)]
+     keyby = .(essround)][, all.equal(weight_des, weight_est)]
 dat2[, lapply(.SD, sum), .SDcols = c("weight_des", "weight_est"),
-     keyby = .(essround, cntry)]
+     keyby = .(essround, cntry)][, all.equal(weight_des, weight_est)]
 
 
 # Save ####
 saveRDS(object = dat2, file = "data/dat2.rds")
+names(dat2)
