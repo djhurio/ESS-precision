@@ -5,7 +5,9 @@ gc()
 
 # Results by Peter
 
-fn <- max(list.files(path = "reports", full.names = T))
+fn <- max(list.files(path = "reports",
+                     pattern = "ESS10 sample parameter estimates v10",
+                     full.names = T))
 dat_p <- openxlsx2::read_xlsx(
   xlsxFile = fn,
   skipEmptyRows = TRUE,
@@ -108,5 +110,9 @@ dat_wide <- dcast.data.table(data = dat_long,
                              formula = cntry + domain ~ variable,
                              value.var = c("value_P", "value_M", "diff"))
 
-write_xlsx(x = dat_wide, file = "tables/compare-ess10-sample-par-est.xlsx",
-           asTable = F, na.strings = "")
+write_xlsx(
+  x = dat_wide,
+  file = glue::glue("tables/compare-ess10-sample-par-est-{Sys.Date()}.xlsx"),
+  asTable = F,
+  na.strings = ""
+)
