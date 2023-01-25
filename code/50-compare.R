@@ -116,3 +116,35 @@ write_xlsx(
   asTable = F,
   na.strings = ""
 )
+
+
+# Gross sample size
+dat_long[variable == "n_gross" & abs(diff) > 0][order(diff)]
+
+# Net sample size
+dat_long[variable == "n_net" & abs(diff) > 0][order(diff)]
+
+# Gross sample size
+dat_wide[
+  abs(diff_n_gross) > 0,
+  .(cntry, domain, value_P_n_gross, value_M_n_gross, diff_n_gross)
+][order(diff_n_gross)]
+
+# Net sample size
+dat_wide[
+  abs(diff_n_net) > 0,
+  .(cntry, domain, value_P_n_net, value_M_n_net, diff_n_net)
+][order(diff_n_net)]
+
+# Other parameters
+dat_x <- dat_wide[abs(diff_n_net) == 0, .(cntry, domain)]
+
+dat_y <- dat_long[dat_x][abs(diff) > 0.001]
+
+dat_y[grep("ri|rr", variable)]
+
+dat_y[grep("deffp", variable)][order(diff)]
+dat_y[grep("roh", variable)][order(diff)]
+dat_y[grep("b_bar", variable)][order(diff)]
+
+dat_long[cntry == "HU"]
