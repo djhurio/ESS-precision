@@ -128,6 +128,18 @@ dat2[, .N, keyby = .(essround,
 dat2[is.na(dweight), .(essround, cntry, dweight, pspwght, pweight, anweight)]
 
 
+# Weight testing
+dat2[is.na(anweight), anweight := pspwght * pweight]
+tab_weight <- dat2[, c(.(n_resp = .N), lapply(.SD, sum)),
+                   .SDcols = c("dweight", "pspwght", "anweight"),
+                   keyby = .(essround, cntry)]
+tab_weight[, anweight := anweight * 10e3]
+tab_weight[, diff_d := abs(n_resp - dweight)]
+tab_weight[, diff_p := abs(n_resp - pspwght)]
+
+openxlsx::write.xlsx(x = tab_weight, file = "tables/tab_weight_sums.xlsx")
+
+
 # Design weights computed from sampling probabilities
 dat2[, summary(prob)]
 
