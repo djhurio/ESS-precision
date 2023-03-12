@@ -12,8 +12,19 @@ dat <- readRDS(file = "data/dat.rds")
 # str(dat$domain)
 dat[, domain := as.integer(domain)]
 dat[, .N, keyby = .(domain)]
-dat[is.na(domain), domain := 1L]
+dat[is.na(domain), domain := 0L]
 dat[, .N, keyby = .(domain)]
+
+# count of domains
+dat[, dom_n := length(unique(domain)), by = .(essround, cntry)]
+dat[, .N, keyby = .(dom_n)]
+dat[, .N, keyby = .(dom_n, domain)]
+dat[, .N, keyby = .(dom_n, domain, essround)]
+
+dat[dom_n == 1L, domain := 0L]
+dat[, .N, keyby = .(domain)]
+dat[, dom_n := NULL]
+
 dcast.data.table(dat, essround ~ domain, fun.aggregate = length)
 
 if (anyDuplicated(dat, by = c("essround", "cntry", "idno"))) {
@@ -117,6 +128,18 @@ dat2[, .N, keyby = .(essround,
 dat2[is.na(dweight), .(essround, cntry, dweight, pspwght, pweight, anweight)]
 
 
+# Weight testing
+dat2[is.na(anweight), anweight := pspwght * pweight]
+tab_weight <- dat2[, c(.(n_resp = .N), lapply(.SD, sum)),
+                   .SDcols = c("dweight", "pspwght", "anweight"),
+                   keyby = .(essround, cntry)]
+tab_weight[, anweight := anweight * 10e3]
+tab_weight[, diff_d := abs(n_resp - dweight)]
+tab_weight[, diff_p := abs(n_resp - pspwght)]
+
+openxlsx::write.xlsx(x = tab_weight, file = "tables/tab_weight_sums.xlsx")
+
+
 # Design weights computed from sampling probabilities
 dat2[, summary(prob)]
 
@@ -174,6 +197,7 @@ tmp[abs(dweight - dweight2) > .1, .N, keyby = .(dweight2 > dweight)]
 
 
 # dat2[, weight_des := dw]
+dat2[, dw := NULL]
 
 dat2[!is.na(anweight), .(anweight, pspwght * pweight)]
 dat2[!is.na(anweight), all.equal(anweight, pspwght * pweight)]
@@ -188,10 +212,11 @@ dat2[!is.na(pspwght), weight_est := pspwght * pweight * 10e3]
 dat2[ is.na(pspwght), weight_est := weight_des]
 
 dat2[, lapply(.SD, sum), .SDcols = c("weight_des", "weight_est"),
-     keyby = .(essround)]
+     keyby = .(essround)][, all.equal(weight_des, weight_est)]
 dat2[, lapply(.SD, sum), .SDcols = c("weight_des", "weight_est"),
-     keyby = .(essround, cntry)]
+     keyby = .(essround, cntry)][, all.equal(weight_des, weight_est)]
 
 
 # Save ####
 saveRDS(object = dat2, file = "data/dat2.rds")
+names(dat2)
