@@ -16,20 +16,22 @@ gc()
 # Update files as necessary
 
 # delete all sav and html files
-list.files(path = "data-ess/CF",
+list.files(path = file.path(data.ess, "CF"),
            pattern = "(csv|html)$",
            full.names = T) |> file.remove()
 
 # unzip all data files
-for (x in list.files(path = "data-ess/CF", pattern = ".zip$", full.names = T)) {
+for (x in list.files(path = file.path(data.ess, "CF"),
+                     pattern = ".zip$",
+                     full.names = T)) {
   cat(x, "\n")
-  utils::unzip(zipfile = x, exdir = "data-ess/CF")
+  utils::unzip(zipfile = x, exdir = file.path(data.ess, "CF"))
 }
 rm(x)
 
 
 # Read data
-x <- list.files(path = "data-ess/CF",
+x <- list.files(path = file.path(data.ess, "CF"),
                 pattern = "csv$",
                 full.names = T)
 
@@ -98,6 +100,41 @@ if (dat_cf[, .N] != dat[, .N]) stop("Error in merge")
 if (dat[, any(!cf)]) stop("There is resp not in CF")
 
 
+
+# Labels for Final Outcome Code of Contact Attempts
+dat[, foutcod_label := factor(
+  x = foutcod,
+  levels = c(0, 10, 11, 12, 20, 30, 31, 32, 33, 34, 41, 42, 43, 44, 45, 46,
+             51, 52, 53, 54, 61, 62, 63, 64, 65, 67, 88),
+  labels = c("Contact forms missing",
+             "Valid interview",
+             "Partial interview: break off",
+             "Invalid interview",
+             "Non-contact",
+             "Refusal because of opt-out list",
+             "Broken appointment",
+             "Refusal by respondent",
+             "Refusal by proxy",
+             "Household refusal, before selection",
+             "Respondent not available, away",
+             "Respondent mentally/physical unable/ill/sick (short term)",
+             "Respondent deceased",
+             "Language barrier",
+             "Contact but no interview, other",
+             "Respondent mentally/physical unable/ill/sick (long term)",
+             "Respondent moved out of country",
+             "Respondent moved to unknown destination",
+             "Respondent has moved, still in country",
+             "Address not traceable",
+             "Derelict or demolished house",
+             "Not yet built, not ready for occupation",
+             "Not occupied",
+             "Address not residential: business",
+             "Address not residential: institution",
+             "Other ineligible",
+             "Undefined")
+)]
+
 # outcome
 dat[, outcome := NA_integer_]
 dat[ (resp),                                 outcome := 1L]
@@ -111,6 +148,17 @@ dcast.data.table(
   formula = outcome ~ essround + selfcomp,
   fun.aggregate = length
 )
+
+
+
+# Test case for HR R10
+tmp <- dat[essround == "R10" & cntry == "HR",
+           .N,
+           keyby = .(essround, selfcomp, cntry, edition, proddate, typesamp,
+                     foutcod, foutcod_label, resp, outcome)]
+write.xlsx(x = tmp, file = "tables/R10-HR-CF-foutcod.xlsx", colWidths = "auto")
+rm(tmp)
+
 
 
 # Sample size, ri, and rr

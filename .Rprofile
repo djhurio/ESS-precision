@@ -10,3 +10,6 @@ library(openxlsx2)
 
 library(haven)
 library(ggplot2)
+
+# Data files
+data.ess <- "~/Documents/ESS-precision/data-ess"
