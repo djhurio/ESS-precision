@@ -4,10 +4,4 @@
 .Ruserdata
 
 /data/*
-/data-ess/*
-/results/*
-/plots/*
-/reports/*
-
-*.zip
-*.xlsx*
+/data-tmp/*

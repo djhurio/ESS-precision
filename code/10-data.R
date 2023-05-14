@@ -63,15 +63,14 @@ if (length(variables$varname) != 75L + 3L) stop("Check ICC variables")
 # Check if new versions of the files have been published
 # Update files as necessary
 
-# delete all sav and html files
-list.files(path = "data-ess",
-           pattern = "(sav|html)$",
+# delete all temp files
+list.files(path = "data-tmp",
            full.names = T) |> file.remove()
 
 # unzip all data files
 for (x in list.files(path = "data-ess", pattern = ".zip$", full.names = T)) {
   cat(x, "\n")
-  utils::unzip(zipfile = x, exdir = "data-ess")
+  utils::unzip(zipfile = x, exdir = "data-tmp")
 }
 rm(x)
 
@@ -82,13 +81,15 @@ read.ess <- function(r) {
 
   # Survey data
   dat_surv <- list.files(
-    path = "data-ess", pattern = glue::glue("^ESS{r}e.*sav$"), full.names = T
+    path = "data-tmp",
+    pattern = glue::glue("^ESS{r}e.*sav$"), full.names = T
   ) |> haven::read_sav()
   setDT(dat_surv)
 
   # SDDF data
   dat_sddf <- list.files(
-    path = "data-ess", pattern = glue::glue("^ESS{r}SDDFe.*sav$"), full.names = T
+    path = "data-tmp",
+    pattern = glue::glue("^ESS{r}SDDFe.*sav$"), full.names = T
   ) |> haven::read_sav()
   setDT(dat_sddf)
 
