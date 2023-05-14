@@ -117,12 +117,12 @@ map_df(dat_r7r8, class)
 
 # R9
 dat_r9 <- read_sav(file = list.files(
-  path = "data-ess", pattern = "^ESS9.*sav$", full.names = T
+  path = "data-tmp", pattern = "^ESS9.*sav$", full.names = T
 )) |> as.data.table()
 
 # R10
 files_r10 <- list.files(
-  path = "data-ess", pattern = "^ESS10.*sav$", full.names = T
+  path = "data-tmp", pattern = "^ESS10.*sav$", full.names = T
 )
 names(files_r10) <- basename(path = files_r10) |>
   sub(pattern = ".sav$", replacement = "")
