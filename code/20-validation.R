@@ -196,20 +196,21 @@ tmp[abs(dweight - dweight2) > .1, .N, keyby = .(essround, cntry)]
 tmp[abs(dweight - dweight2) > .1, .N, keyby = .(dweight2 > dweight)]
 
 
-# dat2[, weight_des := dw]
-dat2[, dw := NULL]
-
 dat2[!is.na(anweight), .(anweight, pspwght * pweight)]
 dat2[!is.na(anweight), all.equal(anweight, pspwght * pweight)]
 
 dat2[, .N, keyby = .(is.na(pspwght))]
 
 # Design wights used for the deff_p estimation
-dat2[, weight_des := dweight * pweight * 10e3]
+# dat2[, weight_des := dweight * pweight * 10e3]
+# See discussion at
+# https://myessr11.upf.edu/group/myess/forum/-/message_boards/message/108373
+dat2[, weight_des := dw]
+dat2[, dw := NULL]
 
 # Estimation weights used for the pop size and ratio linearisation
 dat2[!is.na(pspwght), weight_est := pspwght * pweight * 10e3]
-dat2[ is.na(pspwght), weight_est := weight_des]
+dat2[ is.na(pspwght), weight_est := dweight * pweight * 10e3]
 
 dat2[, lapply(.SD, sum), .SDcols = c("weight_des", "weight_est"),
      keyby = .(essround)][, all.equal(weight_des, weight_est)]

@@ -64,8 +64,7 @@ if (length(variables$varname) != 75L + 3L) stop("Check ICC variables")
 # Update files as necessary
 
 # delete all temp files
-list.files(path = "data-tmp",
-           full.names = T) |> file.remove()
+list.files(path = "data-tmp", full.names = T) |> file.remove()
 
 # unzip all data files
 for (x in list.files(path = "data-ess", pattern = ".zip$", full.names = T)) {
@@ -284,9 +283,8 @@ dat[, .N, keyby = .(essround, selfcomp, edition, proddate)]
 # 1:      R07    FALSE     2.2 2018-12-01 40185
 # 2:      R08    FALSE     2.2 2020-12-10 44387
 # 3:      R09    FALSE     3.1 2021-02-17 49519
-# 4:      R10    FALSE     2.0 2022-12-08 33351
-# 5:      R10     TRUE     1.0 2022-12-08 18868
-
+# 4:      R10    FALSE     3.0 2023-05-08 37611
+# 5:      R10     TRUE     2.0 2023-05-11 21199
 
 # Number of respondents by country and round
 table_cntry_essround <- dcast.data.table(

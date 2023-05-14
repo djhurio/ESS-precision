@@ -15,23 +15,8 @@ gc()
 # Check if new versions of the files have been published
 # Update files as necessary
 
-# delete all sav and html files
-list.files(path = file.path(data.ess, "CF"),
-           pattern = "(csv|html)$",
-           full.names = T) |> file.remove()
-
-# unzip all data files
-for (x in list.files(path = file.path(data.ess, "CF"),
-                     pattern = ".zip$",
-                     full.names = T)) {
-  cat(x, "\n")
-  utils::unzip(zipfile = x, exdir = file.path(data.ess, "CF"))
-}
-rm(x)
-
-
 # Read data
-x <- list.files(path = file.path(data.ess, "CF"),
+x <- list.files(path = "data-tmp",
                 pattern = "csv$",
                 full.names = T)
 
