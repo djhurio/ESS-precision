@@ -6,7 +6,7 @@ gc()
 # Results by Peter
 
 fn <- max(list.files(path = "reports",
-                     pattern = "ESS10 sample parameter estimates v10",
+                     pattern = "ESS10 sample parameter estimates v1[0-9]",
                      full.names = T))
 dat_p <- openxlsx2::read_xlsx(
   xlsxFile = fn,
@@ -29,6 +29,9 @@ dat_p <- dat_p[, x, with = FALSE]
 rm(x)
 
 setnames(dat_p, sub(".1", "", names(dat_p)))
+
+# Remove duplicates (see IT)
+dat_p <- unique(dat_p, by = "cntry_dom", fromLast = TRUE)
 
 dat_p[, cntry := substr(cntry_dom, 1, 2)]
 
@@ -119,10 +122,10 @@ write_xlsx(
 
 
 # Gross sample size
-dat_long[variable == "n_gross" & abs(diff) > 0][order(diff)]
+dat_long[variable == "n_gross" & abs(diff) > 0][order(abs(diff))]
 
 # Net sample size
-dat_long[variable == "n_net" & abs(diff) > 0][order(diff)]
+dat_long[variable == "n_net" & abs(diff) > 0][order(abs(diff))]
 
 # Gross sample size
 dat_wide[
