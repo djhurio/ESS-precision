@@ -262,7 +262,13 @@ fwrite(variables, file = "tables/variables.csv", quote = T)
 
 
 # Check the edition and production dates
-dat[, .N, keyby = .(name, essround, edition, proddate)]
+dat[, .N, keyby = .(essround, name, edition, proddate)]
+#    essround       name edition   proddate     N
+# 1:        7  ESS7e02_2     2.2 01.12.2018 40185
+# 2:        8  ESS8e02_2     2.2 10.12.2020 44387
+# 3:        9  ESS9e03_1     3.1 17.02.2021 49519
+# 4:       10 ESS10SCe03     3.0 30.06.2023 22074
+# 5:       10 ESS10e03_1     3.1 30.06.2023 37611
 
 
 # Self-completion
@@ -283,8 +289,8 @@ dat[, .N, keyby = .(essround, selfcomp, edition, proddate)]
 # 1:      R07    FALSE     2.2 2018-12-01 40185
 # 2:      R08    FALSE     2.2 2020-12-10 44387
 # 3:      R09    FALSE     3.1 2021-02-17 49519
-# 4:      R10    FALSE     3.0 2023-05-08 37611
-# 5:      R10     TRUE     2.0 2023-05-11 21199
+# 4:      R10    FALSE     3.1 2023-06-30 37611
+# 5:      R10     TRUE     3.0 2023-06-30 22074
 
 # Number of respondents by country and round
 table_cntry_essround <- dcast.data.table(

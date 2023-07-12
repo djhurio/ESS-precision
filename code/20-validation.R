@@ -7,6 +7,7 @@ gc()
 
 # Load data ####
 dat <- readRDS(file = "data/dat.rds")
+dat[, .N, keyby = .(essround, selfcomp, edition, proddate)]
 
 # domain
 # str(dat$domain)
@@ -41,8 +42,8 @@ dat[, .N, keyby = .(essround, cntry, domain)]
 
 dat[is.na(stratum), .N, keyby = .(essround, cntry, stratum)]
 
-m <- dat[, min(stratum, na.rm = T)]
-m
+# m <- dat[, min(stratum, na.rm = T)]
+# m
 
 # # Recode missing stratum values
 # dat[is.na(stratum), stratum := m - 1L]
@@ -205,6 +206,7 @@ dat2[, .N, keyby = .(is.na(pspwght))]
 # dat2[, weight_des := dweight * pweight * 10e3]
 # See discussion at
 # https://myessr11.upf.edu/group/myess/forum/-/message_boards/message/108373
+# dw := 1 / prob
 dat2[, weight_des := dw]
 dat2[, dw := NULL]
 
