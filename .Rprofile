@@ -1,3 +1,4 @@
+source("renv/activate.R")
 # Options
 options(max.print = 10e3)
 
