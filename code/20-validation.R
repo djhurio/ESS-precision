@@ -21,6 +21,7 @@ dat[, dom_n := length(unique(domain)), by = .(essround, cntry)]
 dat[, .N, keyby = .(dom_n)]
 dat[, .N, keyby = .(dom_n, domain)]
 dat[, .N, keyby = .(dom_n, domain, essround)]
+dat[dom_n > 2, .N, keyby = .(dom_n, domain, essround, cntry)]
 
 dat[dom_n == 1L, domain := 0L]
 dat[, .N, keyby = .(domain)]
@@ -52,9 +53,12 @@ dat[is.na(stratum), .N, keyby = .(essround, cntry, stratum)]
 m <- dat[, nchar(max(stratum))]
 m
 
-dat[, STR := paste(essround, cntry, paste0("D", domain),
-                   stringr::str_pad(string = stratum, width = m, pad = "0"),
-                   sep = "_")]
+dat[, STR := paste(
+    essround, cntry, paste0("D", domain),
+    stringr::str_pad(string = stratum, width = m, pad = "0"),
+    sep = "_"
+)]
+
 dat[, .N, keyby = .(essround, cntry, domain, stratum, STR)]
 dat[, .N, keyby = .(essround, cntry, domain, stratum)]
 dat[, .N, keyby = .(STR)]
@@ -63,9 +67,11 @@ dat[, .N, keyby = .(STR)]
 m <- dat[, nchar(max(psu))]
 m
 
-dat[, PSU := paste(STR,
-                   stringr::str_pad(string = psu, width = m, pad = "0"),
-                   sep = "_")]
+dat[, PSU := paste(
+    STR,
+    stringr::str_pad(string = psu, width = m, pad = "0"),
+    sep = "_"
+)]
 
 dat[, .N, keyby = .(essround, cntry, domain, stratum, psu, PSU)]
 dat[, .N, keyby = .(essround, cntry, domain, stratum, psu)]
@@ -74,27 +80,37 @@ dat[, .N, keyby = .(STR, PSU)]
 
 dat[is.na(psu), .(stratum, psu, STR, PSU)]
 
-tab_cntry <- dat[, .(n_strat = sum(!duplicated(STR)),
-                     n_psu   = sum(!duplicated(PSU)),
-                     n_resp  = .N), keyby = .(essround, cntry, domain)]
+tab_cntry <- dat[, .(
+    n_strat = sum(!duplicated(STR)),
+    n_psu   = sum(!duplicated(PSU)),
+    n_resp  = .N
+), keyby = .(essround, cntry, domain)]
 tab_cntry
 
-tab_strata <- dat[, .(n_psu  = sum(!duplicated(PSU)),
-                      n_resp = .N),
-                  keyby = .(essround, cntry, domain, STR)]
+tab_strata <- dat[, .(
+    n_psu  = sum(!duplicated(PSU)),
+    n_resp = .N
+), keyby = .(essround, cntry, domain, STR)]
 tab_strata
 
-tab_psu <- dat[, .(n_resp = .N),
-               keyby = .(essround, cntry, domain, STR, PSU)]
+tab_psu <- dat[, .(
+    n_resp = .N
+), keyby = .(essround, cntry, domain, STR, PSU)]
 tab_psu
 
 tabl <- list(tab_cntry, tab_strata, tab_psu)
 names(tabl) <- c("cntry", "strata", "psu")
 
-write.xlsx(tabl, file = "tables/SDDF-tables.xlsx",
-           colWidths = "auto", firstRow = T,
-           headerStyle = createStyle(textDecoration = "italic",
-                                     halign = "center"))
+write.xlsx(
+    tabl,
+    file = "tables/SDDF-tables.xlsx",
+    colWidths = "auto",
+    firstRow = T,
+    headerStyle = createStyle(
+        textDecoration = "italic",
+        halign = "center"
+    )
+)
 
 
 # Make a copy
@@ -119,21 +135,26 @@ dat2[, prob := as.numeric(prob)]
 dat2[, .N, keyby = .(na_prob = is.na(prob), na_dweight = is.na(dweight))]
 dat2[is.na(prob), .N, keyby = .(essround, cntry)]
 
-dat2[, .N, keyby = .(essround,
-                     prob     = !is.na(prob),
-                     dweight  = !is.na(dweight),
-                     pspwght  = !is.na(pspwght),
-                     pweight  = !is.na(pweight),
-                     anweight = !is.na(anweight))]
+dat2[, .N, keyby = .(
+    essround,
+    prob     = !is.na(prob),
+    dweight  = !is.na(dweight),
+    pspwght  = !is.na(pspwght),
+    pweight  = !is.na(pweight),
+    anweight = !is.na(anweight)
+)]
 
 dat2[is.na(dweight), .(essround, cntry, dweight, pspwght, pweight, anweight)]
 
 
 # Weight testing
 dat2[is.na(anweight), anweight := pspwght * pweight]
-tab_weight <- dat2[, c(.(n_resp = .N), lapply(.SD, sum)),
-                   .SDcols = c("dweight", "pspwght", "anweight"),
-                   keyby = .(essround, cntry)]
+tab_weight <- dat2[
+    ,
+    c(.(n_resp = .N), lapply(.SD, sum)),
+    .SDcols = c("dweight", "pspwght", "anweight"),
+    keyby = .(essround, cntry)
+]
 tab_weight[, anweight := anweight * 10e3]
 tab_weight[, diff_d := abs(n_resp - dweight)]
 tab_weight[, diff_p := abs(n_resp - pspwght)]
@@ -152,9 +173,12 @@ dat2[prob == 0 | prob > 1, dw := 1]
 
 tmp <- dat2[, .(essround, cntry, dweight, pspwght, pweight, anweight, prob, dw)]
 
-tmp[, c(.(n = .N), lapply(.SD, sum)),
+tmp[
+    ,
+    c(.(n = .N), lapply(.SD, sum)),
     .SDcols = c("dweight", "pspwght", "pweight", "anweight"),
-    keyby = .(essround, cntry)]
+    keyby = .(essround, cntry)
+]
 
 tmp[, dweight2 := .N * dw / sum(dw), by = .(essround, cntry)]
 
