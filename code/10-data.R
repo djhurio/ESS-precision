@@ -1,7 +1,7 @@
 # ESS survey data
 #
 # Data is downloaded from the ESS Data Portal
-# https://ess-search.nsd.no/
+# https://ess.sikt.no/
 #
 # Data is download since round 7 (2014)
 # Data should be downloaded manualy and saved in the "data-ess" folder
@@ -10,6 +10,7 @@
 # For rounds 7-8 integrated and SDDF files should be saved
 # For rounds since round 9 only integrated files should be saved
 # For round 10 self-completion data file should be saved aditionaly
+# For round 11 sample design variables are included in the integrated file
 #
 # All data is saved in SAV (SPSS format as ZIP files)
 
@@ -31,22 +32,28 @@ gc()
 variables <- openxlsx::read.xlsx(xlsxFile = "variables/ICC-variables.xlsx")
 setDT(variables)
 
-variables <- melt.data.table(data = variables,
-                             measure.vars = names(variables),
-                             na.rm = T,
-                             variable.name = "type",
-                             value.name = "varname")
+variables <- melt.data.table(
+  data = variables,
+  measure.vars = names(variables),
+  na.rm = T,
+  variable.name = "type",
+  value.name = "varname"
+)
 
 variables[, varname := tolower(varname)]
 
 # Corrections for the variable list
-# https://myess.upf.edu/portal/g/:spaces:sampling/cst_sampling_weighting/ForumPortlet/topic/topicaa8906cc7f00010138aa844b7c289ac3/2
+# https://myess.upf.edu/portal/g/:spaces:sampling/cst_sampling_weighting/
+# ForumPortlet/topic/topicaa8906cc7f00010138aa844b7c289ac3/2
 #
 # Add variables
 # lvgptnea is replacing lvgptne since the round 5
 # dvrcdeva is replacing dvrcdev since the round 5
 # scrlgblg is replacing lgblg for the round 10 SC data
-x <- data.table(type = "Binary", varname = c("lvgptnea", "dvrcdeva", "scrlgblg"))
+x <- data.table(
+  type = "Binary",
+  varname = c("lvgptnea", "dvrcdeva", "scrlgblg")
+)
 variables <- rbind(variables, x)
 rm(x)
 
@@ -111,7 +118,7 @@ read.ess <- function(r) {
 # R7-R8
 dat_r7r8 <- map(.x = c(ESS07 = 7L, ESS08 = 8L), .f = read.ess)
 names(dat_r7r8)
-map_df(dat_r7r8, class)
+map(dat_r7r8, class)
 
 
 # R9
