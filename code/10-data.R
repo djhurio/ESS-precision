@@ -29,8 +29,7 @@ gc()
 # page 9
 # Appendix: Variables used for estimating the intra-cluster correlation, ρ
 
-variables <- openxlsx::read.xlsx(xlsxFile = "variables/ICC-variables.xlsx")
-setDT(variables)
+variables <- openxlsx2::read_xlsx("variables/ICC-variables.xlsx") |> setDT()
 
 variables <- melt.data.table(
   data = variables,
@@ -50,12 +49,13 @@ variables[, varname := tolower(varname)]
 # lvgptnea is replacing lvgptne since the round 5
 # dvrcdeva is replacing dvrcdev since the round 5
 # scrlgblg is replacing lgblg for the round 10 SC data
-x <- data.table(
-  type = "Binary",
-  varname = c("lvgptnea", "dvrcdeva", "scrlgblg")
+variables <- rbind(
+  variables,
+  data.table(
+    type = "Binary",
+    varname = c("lvgptnea", "dvrcdeva", "scrlgblg")
+  )
 )
-variables <- rbind(variables, x)
-rm(x)
 
 setorder(variables, type, varname)
 variables
@@ -120,11 +120,10 @@ dat_r7r8 <- map(.x = c(ESS07 = 7L, ESS08 = 8L), .f = read.ess)
 names(dat_r7r8)
 map(dat_r7r8, class)
 
-
 # R9
 dat_r9 <- read_sav(file = list.files(
   path = "data-tmp", pattern = "^ESS9.*sav$", full.names = T
-)) |> as.data.table()
+)) |> setDT()
 
 # R10
 files_r10 <- list.files(
@@ -134,16 +133,21 @@ names(files_r10) <- basename(path = files_r10) |>
   sub(pattern = ".sav$", replacement = "")
 names(files_r10)
 
-dat_r10 <- map(.x = files_r10, .f = haven::read_sav) |>
-  map(.f = as.data.table)
+dat_r10 <- map(.x = files_r10, .f = haven::read_sav) |> map(.f = setDT)
 names(dat_r10)
-map_df(dat_r10, class)
+map(dat_r10, class)
+
+# R11
+dat_r11 <- read_sav(file = list.files(
+  path = "data-tmp", pattern = "^ESS11.*sav$", full.names = T
+)) |> setDT()
+
 
 # bind and remove
-dat <- c(dat_r7r8, list(ESS09 = dat_r9), dat_r10)
+dat <- c(dat_r7r8, list(ESS09 = dat_r9), dat_r10, list(ESS11 = dat_r11))
 names(dat)
-map_df(dat, class)
-rm(dat_r7r8, dat_r9, dat_r10)
+map(dat, class) |> map_chr(paste, collapse = ", ")
+rm(dat_r7r8, dat_r9, dat_r10, dat_r11)
 
 
 # Save names of the variables
@@ -163,24 +167,29 @@ variables[, c(as.character(round.labels)) := lapply(
   X = dat.names, FUN = function(x) (variables$varname %in% x))
 ]
 
-variables[, flag := !all(unlist(.SD)),
-          .SDcols = as.character(round.labels),
-          by = .(varname)]
+variables[
+  ,
+  flag := !all(unlist(.SD)),
+  .SDcols = as.character(round.labels),
+  by = .(varname)
+]
 variables[, .N, keyby = .(flag)]
 
 variables[(flag)]
-#      type  varname ESS07 ESS08 ESS09 ESS10 ESS10SC flag
-# 1: Binary   dscrdk  TRUE  TRUE  TRUE  TRUE   FALSE TRUE
-# 2: Binary  dscrref  TRUE  TRUE  TRUE  TRUE   FALSE TRUE
-# 3: Binary  dvrcdev FALSE FALSE FALSE FALSE   FALSE TRUE
-# 4: Binary  lvgptne FALSE FALSE FALSE FALSE   FALSE TRUE
-# 5: Binary   rlgblg  TRUE  TRUE  TRUE  TRUE   FALSE TRUE
-# 6: Binary  rlgblge  TRUE  TRUE  TRUE  TRUE   FALSE TRUE
-# 7: Binary scrlgblg FALSE FALSE FALSE FALSE    TRUE TRUE
+#      type  varname  ESS07  ESS08  ESS09  ESS10 ESS10SC  ESS11   flag
+#    <fctr>   <char> <lgcl> <lgcl> <lgcl> <lgcl>  <lgcl> <lgcl> <lgcl>
+# 1: Binary   dscrdk   TRUE   TRUE   TRUE   TRUE   FALSE   TRUE   TRUE
+# 2: Binary  dscrref   TRUE   TRUE   TRUE   TRUE   FALSE   TRUE   TRUE
+# 3: Binary  dvrcdev  FALSE  FALSE  FALSE  FALSE   FALSE  FALSE   TRUE
+# 4: Binary  lvgptne  FALSE  FALSE  FALSE  FALSE   FALSE  FALSE   TRUE
+# 5: Binary   rlgblg   TRUE   TRUE   TRUE   TRUE   FALSE   TRUE   TRUE
+# 6: Binary  rlgblge   TRUE   TRUE   TRUE   TRUE   FALSE   TRUE   TRUE
+# 7: Binary scrlgblg  FALSE  FALSE  FALSE  FALSE    TRUE  FALSE   TRUE
 
 variables[, map(.SD, sum), .SDcols = as.character(round.labels)]
-#    ESS07 ESS08 ESS09 ESS10 ESS10SC
-# 1:    75    75    75    75      72
+#       ESS07 ESS08 ESS09 ESS10 ESS10SC ESS11
+#       <int> <int> <int> <int>   <int> <int>
+#    1:    75    75    75    75      72    75
 
 # Some of the variables are not available in all rounds
 # Those variables will be excluded for the ICC estimation
@@ -189,10 +198,12 @@ variables[, map(.SD, sum), .SDcols = as.character(round.labels)]
 # Variable selection to reduce the size of a data.table
 
 # Survey design variables and weights
-varnames.design <- c("name", "essround", "edition", "proddate",
-                     "cntry", "idno",
-                     "domain", "stratum", "psu", "prob",
-                     "dweight", "pspwght", "pweight", "anweight")
+varnames.design <- c(
+  "name", "essround", "edition", "proddate",
+  "cntry", "idno",
+  "domain", "stratum", "psu", "prob",
+  "dweight", "pspwght", "pweight", "anweight"
+)
 
 
 # Helper function to subselect necessary variables
@@ -270,13 +281,15 @@ fwrite(variables, file = "tables/variables.csv", quote = T)
 
 # Check the edition and production dates
 dat[, .N, keyby = .(essround, name, edition, proddate)]
-#    essround       name edition   proddate     N
-# 1:        7  ESS7e02_2     2.2 01.12.2018 40185
-# 2:        8  ESS8e02_2     2.2 10.12.2020 44387
-# 3:        9  ESS9e03_1     3.1 17.02.2021 49519
-# 4:       10 ESS10SCe03     3.0 30.06.2023 22074
-# 5:       10 ESS10e03_1     3.1 30.06.2023 37611
-
+# Key: <essround, name, edition, proddate>
+#    essround         name edition   proddate     N
+#       <num>       <char>  <char>     <char> <int>
+# 1:        7    ESS7e02_3     2.3 23.11.2023 40185
+# 2:        8    ESS8e02_3     2.3 23.11.2023 44387
+# 3:        9    ESS9e03_2     3.2 23.11.2023 49519
+# 4:       10 ESS10SCe03_1     3.1 02.11.2023 22074
+# 5:       10   ESS10e03_2     3.2 02.11.2023 37611
+# 6:       11     ESS11e01     1.0 20.06.2024 22190
 
 # Self-completion
 dat[, selfcomp := grepl("SC", name)]
@@ -292,18 +305,21 @@ dat[, proddate := lubridate::dmy(proddate)]
 dat[, .N, keyby = .(proddate)]
 
 dat[, .N, keyby = .(essround, selfcomp, edition, proddate)]
+# Key: <essround, selfcomp, edition, proddate>
 #    essround selfcomp edition   proddate     N
-# 1:      R07    FALSE     2.2 2018-12-01 40185
-# 2:      R08    FALSE     2.2 2020-12-10 44387
-# 3:      R09    FALSE     3.1 2021-02-17 49519
-# 4:      R10    FALSE     3.1 2023-06-30 37611
-# 5:      R10     TRUE     3.0 2023-06-30 22074
+#      <fctr>   <lgcl>  <char>     <Date> <int>
+# 1:      R07    FALSE     2.3 2023-11-23 40185
+# 2:      R08    FALSE     2.3 2023-11-23 44387
+# 3:      R09    FALSE     3.2 2023-11-23 49519
+# 4:      R10    FALSE     3.2 2023-11-02 37611
+# 5:      R10     TRUE     3.1 2023-11-02 22074
+# 6:      R11    FALSE     1.0 2024-06-20 22190
 
 # Number of respondents by country and round
 table_cntry_essround <- dcast.data.table(
   data = dat, formula = cntry ~ essround, fun.aggregate = length
 )
-table_cntry_essround[R10 > 0]
+table_cntry_essround[R11 > 0]
 fwrite(x = table_cntry_essround, file = "tables/table_cntry_essround.csv")
 
 
