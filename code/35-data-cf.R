@@ -11,7 +11,7 @@ gc()
 # data from Contact forms
 #
 # Download Contact forms data from the ESS Data Portal
-# https://ess-search.nsd.no/
+# https://ess.sikt.no/
 # Check if new versions of the files have been published
 # Update files as necessary
 
@@ -27,7 +27,7 @@ dat_cf <- dat_cf[, .(name, essround, edition, proddate, cntry, typesamp,
                      idno, foutcod)]
 gc()
 
-dat_cf[, .N, keyby = .(name, essround, edition, proddate)]
+dat_cf[, .N, keyby = .(essround, name, edition, proddate)]
 
 
 # Self-completion
@@ -54,6 +54,9 @@ dcast.data.table(
 )
 
 # Type of the sample
+dat_cf[, .N, keyby = .(typesamp)]
+dat_cf[, .N, keyby = .(essround, typesamp)]
+
 dat_cf[, typesamp := factor(
   x = typesamp,
   levels = 1:3,
@@ -147,11 +150,16 @@ rm(tmp)
 
 
 # Sample size, ri, and rr
-tab_cf_cntry <- dat[, .(typesamp = paste(unique(typesamp), collapse = "|"),
-                        n_gross = .N,
-                        n_net = sum(resp),
-                        n_ineligibles = sum(outcome == 3)),
-                    keyby = .(essround, selfcomp, cntry)]
+tab_cf_cntry <- dat[
+  ,
+  .(typesamp = paste(unique(typesamp), collapse = "|"),
+    n_gross = .N,
+    n_net = sum(resp),
+    n_ineligibles = sum(outcome == 3)
+  ),
+  keyby = .(essround, selfcomp, cntry)
+]
+
 tab_cf_cntry
 map_chr(tab_cf_cntry, class)
 
