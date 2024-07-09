@@ -111,20 +111,22 @@ dat3[, lapply(.SD, function(x) round(mean(x), 3)),
 dat3[, lapply(.SD, function(x) round(mean(x), 3)),
      .SDcols = c("value_y", "value_z"), by = .(varname)][order(-value_z)]
 
-tab_mean_y <- dcast.data.table(data = dat3, formula = varname ~ essround,
-                               value.var = "value_y",
-                               fun.aggregate = function(x) round(mean(x), 3))
-setnames(
-  x = tab_mean_y,
+tab_mean_y <- dcast.data.table(
+  data = dat3,
+  formula = varname ~ essround,
+  value.var = "value_y",
+  fun.aggregate = function(x) round(mean(x), 3)
+) |> setnames(
   old = as.character(round.labels),
   new = paste0(round.labels, "_Y")
 )
 
-tab_mean_z <- dcast.data.table(data = dat3, formula = varname ~ essround,
-                               value.var = "value_z",
-                               fun.aggregate = function(x) round(mean(x), 3))
-setnames(
-  x = tab_mean_z,
+tab_mean_z <- dcast.data.table(
+  data = dat3,
+  formula = varname ~ essround,
+  value.var = "value_z",
+  fun.aggregate = function(x) round(mean(x), 3)
+) |> setnames(
   old = as.character(round.labels),
   new = paste0(round.labels, "_Z")
 )
@@ -135,12 +137,14 @@ setorder(variables, id)
 setcolorder(variables, "id")
 
 # Write out table about the target variables
-write.xlsx(variables, file = "tables/variables-2.xlsx",
-           colWidths = "auto", firstRow = T,
-           headerStyle = createStyle(textDecoration = "italic",
-                                     halign = "center"))
+write.xlsx(
+  x = variables,
+  file = "tables/variables-2.xlsx",
+  colWidths = "auto", firstRow = T,
+  headerStyle = createStyle(textDecoration = "italic", halign = "center")
+)
 
-fwrite(variables, file = "tables/variables-2.csv", quote = T)
+fwrite(x = variables, file = "tables/variables-2.csv", quote = T)
 
 
 
@@ -157,13 +161,18 @@ dat3[, .N, keyby = .(varname_ext)]
 # using design weights
 dat3[, total_Y := sum(value_y * weight_est), by = .(varname_ext)]
 dat3[, total_Z := sum(value_z * weight_est), by = .(varname_ext)]
-dat3[total_Z > 0,
-     lin_val := (value_y - total_Y / total_Z * value_z) / total_Z]
+dat3[
+  total_Z > 0,
+  lin_val := (value_y - total_Y / total_Z * value_z) / total_Z
+]
 
 
 # PSU variance
-tab_psu <- dat3[!is.na(value), .(n = .N, sd_y_psu = sd(value_y)),
-                keyby = .(varname_ext, PSU)]
+tab_psu <- dat3[
+  !is.na(value),
+  .(n = .N, sd_y_psu = sd(value_y)),
+  keyby = .(varname_ext, PSU)
+]
 tab_psu[n == 1L, sd_y_psu := 0]
 tab_psu <- tab_psu[, .(max_sd_y_psu = max(sd_y_psu)), keyby = .(varname_ext)]
 tab_psu[max_sd_y_psu == 0]
@@ -171,20 +180,28 @@ tab_psu[max_sd_y_psu == 0]
 
 
 # Summary table
-tab_variables <- dat3[, .(n_resp = .N,
-                          n_na = sum(is.na(value)),
-                          sd_y = sd(value_y),
-                          pop_size = sum(weight_est),
-                          total_Y  = sum(weight_est * value_y),
-                          total_Z  = sum(weight_est * value_z)),
-                      keyby = .(varname_ext, essround, cntry, domain,
-                                varname, type)]
+tab_variables <- dat3[, .(
+  n_resp = .N,
+  n_na = sum(is.na(value)),
+  sd_y = sd(value_y),
+  pop_size = sum(weight_est),
+  total_Y  = sum(weight_est * value_y),
+  total_Z  = sum(weight_est * value_z)
+), keyby = .(varname_ext, essround, cntry, domain, varname, type)]
 
-tab_variables <- merge(tab_variables, dat_b,
-                       by = c("essround", "cntry", "domain"), all.x = T)
+tab_variables <- merge(
+  x = tab_variables,
+  y = dat_b,
+  by = c("essround", "cntry", "domain"),
+  all.x = T
+)
 
-tab_variables <- merge(tab_variables, tab_psu,
-                       by = c("varname_ext"), all.x = T)
+tab_variables <- merge(
+  x = tab_variables,
+  y = tab_psu,
+  by = c("varname_ext"),
+  all.x = T
+)
 
 tab_variables[total_Z > 0, ratio := total_Y / total_Z]
 
@@ -213,9 +230,11 @@ tab_variables[, .N, keyby = .(flag)]
 
 
 # Number of variables by country, domain, round
-dcast.data.table(data = tab_variables[!(flag)],
-                 formula = cntry + domain ~ essround,
-                 fun.aggregate = length)
+dcast.data.table(
+  data = tab_variables[!(flag)],
+  formula = cntry + domain ~ essround,
+  fun.aggregate = length
+)
 
 saveRDS(object = tab_variables, file = "data/tab_variables.rds")
 
@@ -327,6 +346,7 @@ print(t2 - t1)
 # Time difference of 17.67596 mins  (2022-12-22)
 # Time difference of 21.22778 mins  (2023-05-14)
 # Time difference of 18.59350 mins  (2023-07-13)
+# Time difference of 21.96192 mins  (2024-07-08) R11
 
 
 # Options (stop at error - default)
