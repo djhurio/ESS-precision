@@ -175,12 +175,13 @@ dat_deff[, deff_c := 1 + (b - 1) * ICC]
 dat_deff[, summary(deff_c)]
 dat_deff[, as.list(summary(deff_c)), keyby = .(flag)]
 
+dat_deff[, .(cntry, domain, essround)]
+
 dcast.data.table(
   data = dat_deff,
   formula = cntry + domain ~ essround,
   value.var = "deff_c",
-  fun.aggregate = round,
-  digits = 3,
+  fun.aggregate = function(x) round(median(x), 3),
   fill = NA
 )
 

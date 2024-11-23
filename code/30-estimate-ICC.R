@@ -206,7 +206,7 @@ tab_variables <- merge(
 tab_variables[total_Z > 0, ratio := total_Y / total_Z]
 
 
-# Cases where esimtation is not possible
+# Cases where estimation is not possible
 tab_variables[n_na == n_resp] # All cases missing
 tab_variables[n_resp - n_na == 1L] # Only 1 respondent
 tab_variables[n_na < n_resp & total_Y == 0] # All answers are 0
@@ -217,7 +217,7 @@ tab_variables[sd_y == 0] # No variation in variable
 tab_variables[max_sd_y_psu == 0]
 tab_variables[b > 1 & sd_y > 0 & ratio != 1 & max_sd_y_psu == 0 & n_resp - n_na > 1L]
 
-# Mark varibales where estimation of effective sample size is not possible:
+# Mark variables where estimation of effective sample size is not possible:
 # 1) variable is a constant (sd_y == 0)
 # 2) mean estimate is 1 (total_Y == total_Z)
 # 3) There is only one respondent ((n_resp - n_na) == 1L)
@@ -347,6 +347,7 @@ print(t2 - t1)
 # Time difference of 21.22778 mins  (2023-05-14)
 # Time difference of 18.59350 mins  (2023-07-13)
 # Time difference of 21.96192 mins  (2024-07-08) R11
+# Time difference of 24.12371 mins  (2024-11-23) R11
 
 
 # Options (stop at error - default)

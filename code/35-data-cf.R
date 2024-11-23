@@ -23,8 +23,9 @@ x <- list.files(path = "data-tmp",
 dat_cf <- map(.x = x, .f = fread) |> rbindlist(use.names = T, fill = T)
 rm(x)
 
-dat_cf <- dat_cf[, .(name, essround, edition, proddate, cntry, typesamp,
-                     idno, foutcod)]
+dat_cf <- dat_cf[, .(
+  name, essround, edition, proddate, cntry, typesamp, typsampa, idno, foutcod
+)]
 gc()
 
 dat_cf[, .N, keyby = .(essround, name, edition, proddate)]
@@ -53,10 +54,32 @@ dcast.data.table(
   fun.aggregate = length
 )
 
-# Type of the sample
+# Type of the sample R07-R10
 dat_cf[, .N, keyby = .(typesamp)]
 dat_cf[, .N, keyby = .(essround, typesamp)]
 
+# Type of the sample from R11
+dat_cf[, .N, keyby = .(typsampa)]
+dat_cf[, .N, keyby = .(essround, typsampa)]
+
+# Combine both
+
+# typesamp
+# 1	Individual person
+# 2	Household
+# 3	Address
+
+# typsampa
+# 1	Individual person
+# 2	Address
+
+dat_cf[typsampa == 1L, typesamp := 1L]
+dat_cf[typsampa == 2L, typesamp := 3L]
+
+dat_cf[, .N, keyby = .(typesamp)]
+dat_cf[, .N, keyby = .(essround, typesamp)]
+
+# Labels
 dat_cf[, typesamp := factor(
   x = typesamp,
   levels = 1:3,
@@ -64,6 +87,7 @@ dat_cf[, typesamp := factor(
 )]
 
 dat_cf[, .N, keyby = .(typesamp)]
+
 
 # Respondents
 dat <- readRDS("data/dat2.rds")
@@ -139,13 +163,13 @@ dcast.data.table(
 
 
 
-# Test case for HR R10
-tmp <- dat[essround == "R10" & cntry == "HR",
-           .N,
-           keyby = .(essround, selfcomp, cntry, edition, proddate, typesamp,
-                     foutcod, foutcod_label, resp, outcome)]
-write.xlsx(x = tmp, file = "tables/R10-HR-CF-foutcod.xlsx", colWidths = "auto")
-rm(tmp)
+# # Test case for HR R10
+# tmp <- dat[essround == "R10" & cntry == "HR",
+#            .N,
+#            keyby = .(essround, selfcomp, cntry, edition, proddate, typesamp,
+#                      foutcod, foutcod_label, resp, outcome)]
+# write.xlsx(x = tmp, file = "tables/R10-HR-CF-foutcod.xlsx", colWidths = "auto")
+# rm(tmp)
 
 
 
