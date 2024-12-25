@@ -4,13 +4,14 @@
 # https://ess.sikt.no/
 #
 # Data is download since round 7 (2014)
-# Data should be downloaded manualy and saved in the "data-ess" folder
+# Data should be downloaded manually and saved in the "data-ess" folder
 #
-# For rounds 1-6 sample design variables are not available anymore
+# For rounds 1-6 sample design variables are not available any more
 # For rounds 7-8 integrated and SDDF files should be saved
 # For rounds since round 9 only integrated files should be saved
-# For round 10 self-completion data file should be saved aditionaly
+# For round 10 self-completion data file should be saved additionally
 # For round 11 sample design variables are included in the integrated file
+#              data from Czechia should be saved additionally
 #
 # All data is saved in SAV (SPSS format as ZIP files)
 
@@ -78,11 +79,20 @@ for (x in list.files(path = "data-ess", pattern = ".zip$", full.names = T)) {
   cat(x, "\n")
   utils::unzip(zipfile = x, exdir = "data-tmp")
 }
+
+# copy all SPSS data files
+x <- list.files(path = "data-ess", pattern = ".sav$", full.names = T)
+file.copy(
+  from = x,
+  to = sub(pattern = "data-ess", replacement = "data-tmp", x = x),
+  overwrite = TRUE
+)
+
 rm(x)
 
 
-# SDDF is seperate for rounds 7-8
-# Function to combine main and sddf data files
+# SDDF is separate for rounds 7-8
+# Function to combine main and SDDF data files
 read.ess <- function(r) {
 
   # Survey data
@@ -138,13 +148,21 @@ names(dat_r10)
 map(dat_r10, class)
 
 # R11
-dat_r11 <- read_sav(file = list.files(
+files_r11 <- list.files(
   path = "data-tmp", pattern = "^ESS11.*sav$", full.names = T
-)) |> setDT()
+)
+names(files_r11) <- basename(path = files_r11) |>
+  sub(pattern = ".sav$", replacement = "") |>
+  sub(pattern = "_.*$", replacement = "")
+names(files_r11)
+
+dat_r11 <- map(.x = files_r11, .f = haven::read_sav) |> map(.f = setDT)
+names(dat_r11)
+map(dat_r11, class)
 
 
 # bind and remove
-dat <- c(dat_r7r8, list(ESS09 = dat_r9), dat_r10, list(ESS11 = dat_r11))
+dat <- c(dat_r7r8, list(ESS09 = dat_r9), dat_r10, dat_r11)
 names(dat)
 map(dat, class) |> map_chr(paste, collapse = ", ")
 rm(dat_r7r8, dat_r9, dat_r10, dat_r11)
@@ -176,20 +194,20 @@ variables[
 variables[, .N, keyby = .(flag)]
 
 variables[(flag)]
-#      type  varname  ESS07  ESS08  ESS09  ESS10 ESS10SC  ESS11   flag
-#    <fctr>   <char> <lgcl> <lgcl> <lgcl> <lgcl>  <lgcl> <lgcl> <lgcl>
-# 1: Binary   dscrdk   TRUE   TRUE   TRUE   TRUE   FALSE   TRUE   TRUE
-# 2: Binary  dscrref   TRUE   TRUE   TRUE   TRUE   FALSE   TRUE   TRUE
-# 3: Binary  dvrcdev  FALSE  FALSE  FALSE  FALSE   FALSE  FALSE   TRUE
-# 4: Binary  lvgptne  FALSE  FALSE  FALSE  FALSE   FALSE  FALSE   TRUE
-# 5: Binary   rlgblg   TRUE   TRUE   TRUE   TRUE   FALSE   TRUE   TRUE
-# 6: Binary  rlgblge   TRUE   TRUE   TRUE   TRUE   FALSE   TRUE   TRUE
-# 7: Binary scrlgblg  FALSE  FALSE  FALSE  FALSE    TRUE  FALSE   TRUE
+#      type  varname  ESS07  ESS08  ESS09  ESS10 ESS10SC  ESS11 ESS11SC   flag
+#    <fctr>   <char> <lgcl> <lgcl> <lgcl> <lgcl>  <lgcl> <lgcl>  <lgcl> <lgcl>
+# 1: Binary   dscrdk   TRUE   TRUE   TRUE   TRUE   FALSE   TRUE   FALSE   TRUE
+# 2: Binary  dscrref   TRUE   TRUE   TRUE   TRUE   FALSE   TRUE   FALSE   TRUE
+# 3: Binary  dvrcdev  FALSE  FALSE  FALSE  FALSE   FALSE  FALSE   FALSE   TRUE
+# 4: Binary  lvgptne  FALSE  FALSE  FALSE  FALSE   FALSE  FALSE   FALSE   TRUE
+# 5: Binary   rlgblg   TRUE   TRUE   TRUE   TRUE   FALSE   TRUE   FALSE   TRUE
+# 6: Binary  rlgblge   TRUE   TRUE   TRUE   TRUE   FALSE   TRUE   FALSE   TRUE
+# 7: Binary scrlgblg  FALSE  FALSE  FALSE  FALSE    TRUE  FALSE    TRUE   TRUE
 
 variables[, map(.SD, sum), .SDcols = as.character(round.labels)]
-#       ESS07 ESS08 ESS09 ESS10 ESS10SC ESS11
-#       <int> <int> <int> <int>   <int> <int>
-#    1:    75    75    75    75      72    75
+#      ESS07 ESS08 ESS09 ESS10 ESS10SC ESS11 ESS11SC
+#      <int> <int> <int> <int>   <int> <int>   <int>
+#   1:    75    75    75    75      72    75      72
 
 # Some of the variables are not available in all rounds
 # Those variables will be excluded for the ICC estimation
@@ -281,15 +299,15 @@ fwrite(variables, file = "tables/variables.csv", quote = T)
 
 # Check the edition and production dates
 dat[, .N, keyby = .(essround, name, edition, proddate)]
-# Key: <essround, name, edition, proddate>
-#    essround         name edition   proddate     N
-#       <num>       <char>  <char>     <char> <int>
-# 1:        7    ESS7e02_3     2.3 23.11.2023 40185
-# 2:        8    ESS8e02_3     2.3 23.11.2023 44387
-# 3:        9    ESS9e03_2     3.2 23.11.2023 49519
-# 4:       10 ESS10SCe03_1     3.1 02.11.2023 22074
-# 5:       10   ESS10e03_2     3.2 02.11.2023 37611
-# 6:       11     ESS11e02     2.0 20.11.2024 40156
+#    essround           name edition   proddate     N
+#       <num>         <char>  <char>     <char> <int>
+# 1:        7      ESS7e02_3     2.3 23.11.2023 40185
+# 2:        8      ESS8e02_3     2.3 23.11.2023 44387
+# 3:        9      ESS9e03_2     3.2 23.11.2023 49519
+# 4:       10   ESS10SCe03_1     3.1 02.11.2023 22074
+# 5:       10     ESS10e03_2     3.2 02.11.2023 37611
+# 6:       11 ESS11SC_CZ_e01     1.0 21.11.2024  1805
+# 7:       11       ESS11e02     2.0 20.11.2024 40156
 
 # Self-completion
 dat[, selfcomp := grepl("SC", name)]
@@ -305,7 +323,6 @@ dat[, proddate := lubridate::dmy(proddate)]
 dat[, .N, keyby = .(proddate)]
 
 dat[, .N, keyby = .(essround, selfcomp, edition, proddate)]
-# Key: <essround, selfcomp, edition, proddate>
 #    essround selfcomp edition   proddate     N
 #      <fctr>   <lgcl>  <char>     <Date> <int>
 # 1:      R07    FALSE     2.3 2023-11-23 40185
@@ -314,6 +331,7 @@ dat[, .N, keyby = .(essround, selfcomp, edition, proddate)]
 # 4:      R10    FALSE     3.2 2023-11-02 37611
 # 5:      R10     TRUE     3.1 2023-11-02 22074
 # 6:      R11    FALSE     2.0 2024-11-20 40156
+# 7:      R11     TRUE     1.0 2024-11-21  1805
 
 # Number of respondents by country and round
 table_cntry_essround <- dcast.data.table(
