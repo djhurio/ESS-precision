@@ -7,6 +7,11 @@ gc()
 # Set ggplot2 theme
 theme_set(theme_bw())
 
+# Functions
+est_deff_p = function(x) {
+  length(x) * sum(x ^ 2) / sum(x) ^ 2
+}
+
 # Load data
 dat2 <- readRDS(file = "data/dat2.rds")
 tab_variables <- readRDS(file = "data/tab_variables.rds")
@@ -71,6 +76,7 @@ dat_b <- dat_b[
 ]
 
 dat_b
+dat_b[cntry == "CZ"]
 dat_b[order(b)]
 dat_b[, summary(b)]
 
@@ -94,11 +100,12 @@ pl_b <- ggplot(dat_b) +
 # deff_p
 dat_deff_p <- dat2[
   ,
-  .(deff_p = .N * sum(weight_des ^ 2) / sum(weight_des) ^ 2),
+  .(deff_p = est_deff_p(weight_des)),
   keyby = .(essround, edition, proddate, cntry, selfcomp, domain)
 ]
 
 dat_deff_p
+dat_deff_p[cntry == "CZ"]
 dat_deff_p[, as.list(summary(deff_p))]
 dat_deff_p[, as.list(summary(deff_p)), keyby = .(essround)]
 dat_deff_p[order(deff_p)]
@@ -231,6 +238,7 @@ tab_deff <- merge(
 )
 
 tab_deff
+tab_deff[cntry == "CZ"]
 tab_deff[, mean(n_variables), keyby = .(essround, selfcomp)]
 tab_deff[, sum(n_variables)]
 
@@ -287,13 +295,15 @@ tab_deff_2 <- merge(
 )
 
 if (tab_deff_2[, !isTRUE(all.equal(n_net, n_resp))]) {
-  stop("Number of respondents do not match")
+  print(tab_deff_2[n_net != n_resp | is.na(n_net) | is.na(n_resp)])
+  warning("Number of respondents do not match")
 }
 
-tab_deff_2[, n_resp := NULL]
+tab_deff_2[, n_net := NULL]
+setnames(tab_deff_2, "n_resp", "n_net")
 setnames(tab_deff, "n_resp", "n_net")
 
-# Aggregated dessign effect
+# Aggregated design effect
 tab_deff_2[, deff := n_net / n_eff]
 
 # Min effective sample size
@@ -349,7 +359,7 @@ tab_deff_3 <- tab_deff_2[
   keyby = .(essround)
 ]
 
-# Aggregated dessign effect
+# Aggregated design effect
 tab_deff_3[, deff := n_net / n_eff]
 
 # Evaluation
@@ -371,8 +381,8 @@ tab_deff_3
 tab_deff_long_3
 
 pl_round <- ggplot(
-  data = tab_deff_long_3,
-  mapping = aes(x = essround, y = value, fill = variable, alpha = value)
+  data = tab_deff_long_3[!is.na(value)],
+  mapping = aes(x = essround, y = value, fill = variable)
 ) +
   geom_col(colour = "black", position = "dodge") +
   geom_label(mapping = aes(x = essround, y = max(n_net),
@@ -424,9 +434,18 @@ ggsave(filename = "plots/plot_ICC_by_variable_type.png",
 
 dir.create(file.path("results", Sys.Date()), showWarnings = F)
 
-setkey(tab_deff_2, essround, cntry, edition, proddate, typesamp, selfcomp)
-setkey(tab_deff,   essround, cntry, edition, proddate, typesamp, selfcomp, domain)
-setkey(dat_deff,   essround, cntry, edition, proddate, selfcomp, domain, type, varname)
+setkey(
+  tab_deff_2,
+  essround, cntry, edition, proddate, typesamp, selfcomp
+)
+setkey(
+  tab_deff,
+  essround, cntry, edition, proddate, typesamp, selfcomp, domain
+)
+setkey(
+  dat_deff,
+  essround, cntry, edition, proddate, selfcomp, domain, type, varname
+)
 
 setcolorder(tab_deff_2)
 setcolorder(tab_deff)
@@ -482,6 +501,7 @@ wb_data <- list(
 wb <- wb_workbook(creator = Sys.info()[["user"]])
 
 # Slow
+t1 <- Sys.time()
 for (x in names(wb_data)) {
   dat_x <- wb_data[[x]]
   n <- dat_x[, .N]
@@ -504,13 +524,14 @@ for (x in names(wb_data)) {
     }
   }
 }
+t2 <- Sys.time()
+print(t2 - t1)
 
 wb_save(
   wb = wb,
   file = glue::glue("results/{Sys.Date()}/ESS_dat_deff_{Sys.Date()}.xlsx"),
   overwrite = T
 )
-
 
 cairo_pdf(
   filename = glue::glue("results/{Sys.Date()}/ESS_plot_deff_{Sys.Date()}.pdf"),
@@ -529,3 +550,14 @@ print(pl_deff_by_dom)
 print(pl_deff)
 print(pl_neff)
 dev.off()
+
+
+
+# CZ
+dat2[cntry == "CZ", .(essround, prob, weight_des, dweight)]
+
+dat2[
+  cntry == "CZ",
+  map(.(1 / prob, weight_des, dweight), est_deff_p),
+  keyby = .(essround, selfcomp)
+]

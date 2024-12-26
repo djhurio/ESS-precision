@@ -30,13 +30,19 @@ dat[, dom_n := NULL]
 dcast.data.table(dat, essround ~ domain, fun.aggregate = length)
 
 if (anyDuplicated(dat, by = c("essround", "cntry", "idno"))) {
-    stop("Duplicated records in data")
+  warning("Duplicated records in data")
 }
 
-# dat[, n := .N, by = .(essround, cntry, domain, idno)]
-# dat[n > 1][order(essround, cntry, domain, idno)]
-# dat[, n := NULL]
+dat[, n := .N, by = .(essround, cntry, domain, idno)]
+dat[n > 1, .(essround, cntry, domain, idno)]
+dat[, n := NULL]
+dat[is.na(idno), .(essround, cntry, domain, idno)]
+dat[is.na(idno)]
 
+# # Remove cases with missing value in idno
+# dat[, .N]
+# dat <- dat[!is.na(idno)]
+# dat[, .N]
 
 dat[, .N, keyby = domain]
 dat[, .N, keyby = .(essround, cntry, domain)]
@@ -84,18 +90,18 @@ tab_cntry <- dat[, .(
     n_strat = sum(!duplicated(STR)),
     n_psu   = sum(!duplicated(PSU)),
     n_resp  = .N
-), keyby = .(essround, cntry, domain)]
+), keyby = .(essround, selfcomp, cntry, domain)]
 tab_cntry
 
 tab_strata <- dat[, .(
     n_psu  = sum(!duplicated(PSU)),
     n_resp = .N
-), keyby = .(essround, cntry, domain, STR)]
+), keyby = .(essround, selfcomp, cntry, domain, STR)]
 tab_strata
 
 tab_psu <- dat[, .(
     n_resp = .N
-), keyby = .(essround, cntry, domain, STR, PSU)]
+), keyby = .(essround, selfcomp, cntry, domain, STR, PSU)]
 tab_psu
 
 tabl <- list(tab_cntry, tab_strata, tab_psu)
@@ -180,45 +186,58 @@ tmp[
     keyby = .(essround, cntry)
 ]
 
-tmp[, dweight2 := .N * dw / sum(dw), by = .(essround, cntry)]
+tmp[, dweight_orig := .N * dw / sum(dw), by = .(essround, cntry)]
 
-tmp[is.na(dweight2)]
+tmp[is.na(dweight_orig)]
 
-tmp[!is.na(prob), all.equal(dweight, dweight2, check.attributes = F)]
-tmp[!is.na(prob)][order(abs(dweight - dweight2))]
+tmp[!is.na(prob), all.equal(dweight, dweight_orig, check.attributes = F)]
 
 tmp[is.na(dweight)]
-tmp[is.na(dweight2)]
+tmp[is.na(dweight_orig)]
 tmp[prob == 0]
 
-tmp[, diff := dweight2 - dweight]
+tmp[, adiff := dweight - dweight_orig]
+tmp[, rdiff := dweight / dweight_orig]
 
-pl <- ggplot(tmp[!is.na(prob)],
-             aes(x = dweight, y = dweight2, colour = diff)) +
-    geom_point() +
-    scale_colour_gradient2(low = "blue", mid = "grey", high = "red") +
-    facet_grid(essround ~ cntry) +
-    theme_bw()
+tmp[is.na(prob), .N]
+
+pl <- ggplot(
+  data = tmp,
+  mapping = aes(x = dweight, y = dweight_orig, colour = adiff)
+) +
+  geom_abline(intercept = 0, slope = 1, colour = "red", linetype = "dotted") +
+  geom_point() +
+  scale_colour_gradient2(low = "blue", mid = "grey", high = "red") +
+  facet_grid(essround ~ cntry) +
+  theme_bw()
 
 ggsave(filename = "plots/plot_dweight.png", plot = pl, width = 16, height = 9)
 # Extreme design weights are being cut
 
+tmp[, .N, keyby = .(abs(adiff) > .1)][, P := prop.table(N)][]
 
+tmp[abs(adiff) > .1][order(adiff)]
 
-tmp[, .N, keyby = .(abs(dweight - dweight2) > .1)]
+tmp[
+  abs(adiff) > .1,
+  .(essround, cntry, prob, dw, dweight_orig, dweight, adiff)
+][order(adiff)]
 
-tmp[abs(dweight - dweight2) > .1][order(abs(dweight - dweight2))]
+# Design weights truncated
+tmp[
+  abs(adiff) > .1 & dweight_orig > dweight,
+  .(essround, cntry, prob, dw, dweight_orig, dweight, adiff)
+][order(-abs(adiff))]
 
-tmp[abs(dweight - dweight2) > .1,
-    .(essround, cntry, prob, dw, dweight, dweight2)]
+# Design weights increased?
+tmp[
+  abs(adiff) > .1 & dweight_orig < dweight,
+  .(essround, cntry, prob, dw, dweight_orig, dweight, adiff)
+][order(-abs(adiff))]
 
-tmp[abs(dweight - dweight2) > .1 & dweight2 > dweight,
-    .(essround, cntry, prob, dw, dweight, dweight2)]
-tmp[abs(dweight - dweight2) > .1 & dweight2 < dweight,
-    .(essround, cntry, prob, dw, dweight, dweight2)]
-
-tmp[abs(dweight - dweight2) > .1, .N, keyby = .(essround, cntry)]
-tmp[abs(dweight - dweight2) > .1, .N, keyby = .(dweight2 > dweight)]
+tmp[abs(adiff) > .1, .N, keyby = .(essround)]
+tmp[abs(adiff) > .1, .N, keyby = .(essround, cntry)]
+tmp[abs(adiff) > .1, .N, keyby = .(dweight_orig > dweight)]
 
 
 dat2[!is.na(anweight), .(anweight, pspwght * pweight)]
@@ -226,9 +245,8 @@ dat2[!is.na(anweight), all.equal(anweight, pspwght * pweight)]
 
 dat2[, .N, keyby = .(is.na(pspwght))]
 
-# Design wights used for the deff_p estimation
-# dat2[, weight_des := dweight * pweight * 10e3]
-# See discussion at
+# Original design weights used for the deff_p estimation
+# See the discussion at
 # https://myessr11.upf.edu/group/myess/forum/-/message_boards/message/108373
 # dw := 1 / prob
 dat2[, weight_des := dw]

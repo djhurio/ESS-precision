@@ -348,6 +348,7 @@ print(t2 - t1)
 # Time difference of 18.59350 mins  (2023-07-13)
 # Time difference of 21.96192 mins  (2024-07-08) R11
 # Time difference of 24.12371 mins  (2024-11-23) R11
+# Time difference of 23.90001 mins  (2024-12-25) R11 + CZ
 
 
 # Options (stop at error - default)
@@ -362,70 +363,17 @@ setkey(dat_ICC, varname_ext)
 saveRDS(object = dat_ICC, file = "data/dat_ICC.rds")
 
 
-# Load
-dat_ICC <- readRDS(file = "data/dat_ICC.rds")
-
-dat_ICC
-
-dat_ICC[, summary(ICC)]
-
-dat_ICC[is.na(ICC)]
-
-
-dat_ICC[, essround := substring(varname_ext, 1, 3)]
-dat_ICC[, cntry    := substring(varname_ext, 5, 6)]
-dat_ICC[, domain   := substring(varname_ext, 8, 9)]
-dat_ICC[, varname  := substring(varname_ext, 11)]
-
-
-# pl0 <- ggplot(data = dat_ICC, mapping = aes(x = ICC1, y = ICC2)) +
-#   geom_point(alpha = .5) +
-#   geom_abline(intercept = 0, slope = 1, colour = "red") +
-#   ggtitle("Intraclass correlation coefficient (ICC or ρ)") +
-#   theme_bw()
+# # Load
+# dat_ICC <- readRDS(file = "data/dat_ICC.rds")
 #
-# pl1 <- ggplot(data = dat_ICC, mapping = aes(x = ICC1, y = ICC2)) +
-#   geom_point(alpha = .5) +
-#   geom_abline(intercept = 0, slope = 1, colour = "red") +
-#   facet_wrap(~ essround) +
-#   ggtitle("Intraclass correlation coefficient (ICC or ρ)") +
-#   theme_bw()
+# dat_ICC
 #
-# pl2 <- ggplot(data = dat_ICC, mapping = aes(x = ICC1, y = ICC2, colour = domain)) +
-#   geom_point(alpha = .5) +
-#   geom_abline(intercept = 0, slope = 1, colour = "red") +
-#   facet_wrap(~ cntry) +
-#   ggtitle("Intraclass correlation coefficient (ICC or ρ)") +
-#   theme_bw()
+# dat_ICC[, summary(ICC)]
 #
-# pl3 <- ggplot(data = dat_ICC, mapping = aes(x = ICC1, y = ICC2)) +
-#   geom_point(alpha = .5) +
-#   geom_abline(intercept = 0, slope = 1, colour = "red") +
-#   facet_wrap(~ varname) +
-#   ggtitle("Intraclass correlation coefficient (ICC or ρ)") +
-#   theme_bw()
+# dat_ICC[is.na(ICC)]
 #
-# dat_ICC3 <- melt.data.table(data = dat_ICC,
-#                             id.vars = c("varname_ext", "essround", "cntry",
-#                                         "domain", "varname"),
-#                             measure.vars = c("ICC1", "ICC2"))
 #
-# pl4 <- ggplot(data = dat_ICC3, mapping = aes(x = value, colour = variable)) +
-#   geom_density() +
-#   facet_wrap(~ varname, scales = "free") +
-#   ggtitle("Density of intraclass correlation coefficient (ICC or ρ)") +
-#   theme_bw()
-#
-# cairo_pdf(filename = "results/ICC1_ICC2.pdf", width = 16, height = 9, onefile = T)
-# pl0
-# pl1
-# pl2
-# pl3
-# pl4
-# dev.off()
-#
-# dat_ICC[, lapply(.SD, sd), .SDcols = c("ICC1", "ICC2"),
-#         keyby = .(varname)][, .N, keyby = .(ICC1 > ICC2)]
-#
-# fwrite(x = dat_ICC, file = "results/ICC1_ICC2.csv")
-
+# dat_ICC[, essround := substring(varname_ext, 1, 3)]
+# dat_ICC[, cntry    := substring(varname_ext, 5, 6)]
+# dat_ICC[, domain   := substring(varname_ext, 8, 9)]
+# dat_ICC[, varname  := substring(varname_ext, 11)]
