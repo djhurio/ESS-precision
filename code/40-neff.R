@@ -9,7 +9,7 @@ theme_set(theme_bw())
 
 # Functions
 est_deff_p = function(x) {
-  length(x) * sum(x ^ 2) / sum(x) ^ 2
+  length(x) * sum(x ^ 2) / (sum(x) ^ 2)
 }
 
 # Load data
@@ -66,7 +66,7 @@ rounds <- sort(unique(dat2$essround))
 dat2[, .N, keyby = .(essround)]
 tab_variables[, .N, keyby = .(essround)]
 
-# Average number of respondnets per PSU
+# Average number of respondents per PSU
 dat_b <- dat2[, .N, keyby = .(essround, edition, proddate, cntry,
                               selfcomp, domain, PSU)]
 dat_b <- dat_b[
@@ -431,7 +431,6 @@ ggsave(filename = "plots/plot_ICC_by_variable_type.png",
 
 
 # Save for all countries ###
-
 dir.create(file.path("results", Sys.Date()), showWarnings = F)
 
 setkey(
@@ -506,7 +505,7 @@ for (x in names(wb_data)) {
   dat_x <- wb_data[[x]]
   n <- dat_x[, .N]
   wb$
-    add_worksheet(sheet = x, zoom = ifelse(x == "variable", 100, 110))$
+    add_worksheet(sheet = x, zoom = 90)$
     add_data_table(sheet = x, dat_x)$
     freeze_pane(sheet = x, firstRow = TRUE)
   for (i in seq_along(dat_x)) {

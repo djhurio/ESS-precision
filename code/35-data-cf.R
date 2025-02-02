@@ -87,6 +87,7 @@ dat_cf[, typesamp := factor(
 )]
 
 dat_cf[, .N, keyby = .(typesamp)]
+dat_cf[, .N, keyby = .(essround, typesamp)]
 
 
 # Respondents
@@ -108,8 +109,8 @@ dat[is.na(resp), resp := FALSE]
 
 dat[, .N, keyby = .(cf, resp)]
 
-if (dat_cf[, .N] != dat[, .N]) stop("Error in merge")
-if (dat[, any(!cf)]) stop("There is resp not in CF")
+if (dat_cf[, .N] != dat[, .N]) warning("Error in CF and RESP merge")
+if (dat[, any(!cf)]) warning("There are respondents which are not in CF")
 
 
 

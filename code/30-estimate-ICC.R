@@ -349,6 +349,7 @@ print(t2 - t1)
 # Time difference of 21.96192 mins  (2024-07-08) R11
 # Time difference of 24.12371 mins  (2024-11-23) R11
 # Time difference of 23.90001 mins  (2024-12-25) R11 + CZ
+# Time difference of 23.18019 mins  (2025-02-02) R11 + CZ edition 2.0
 
 
 # Options (stop at error - default)

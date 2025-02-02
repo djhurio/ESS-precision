@@ -267,7 +267,7 @@ dat <- haven::zap_widths(dat)
 
 # Check values for the target variables
 
-# Function returns a character of max 20 smalles values from a variable
+# Function returns a character of max 20 smallest values from a variable
 foo <- function(x) {
   if (x %in% names(dat)) {
     paste(sort(head(unique(dat[[x]]), n = 20)), collapse = ",")
@@ -306,7 +306,7 @@ dat[, .N, keyby = .(essround, name, edition, proddate)]
 # 3:        9      ESS9e03_2     3.2 23.11.2023 49519
 # 4:       10   ESS10SCe03_1     3.1 02.11.2023 22074
 # 5:       10     ESS10e03_2     3.2 02.11.2023 37611
-# 6:       11 ESS11SC_CZ_e01     1.0 21.11.2024  1805
+# 6:       11 ESS11SC_CZ_e02     2.0 22.01.2025  1805
 # 7:       11       ESS11e02     2.0 20.11.2024 40156
 
 # Self-completion
@@ -331,7 +331,7 @@ dat[, .N, keyby = .(essround, selfcomp, edition, proddate)]
 # 4:      R10    FALSE     3.2 2023-11-02 37611
 # 5:      R10     TRUE     3.1 2023-11-02 22074
 # 6:      R11    FALSE     2.0 2024-11-20 40156
-# 7:      R11     TRUE     1.0 2024-11-21  1805
+# 7:      R11     TRUE     2.0 2025-01-22  1805
 
 # Number of respondents by country and round
 table_cntry_essround <- dcast.data.table(
