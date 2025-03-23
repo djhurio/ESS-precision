@@ -19,7 +19,6 @@ gc()
 x <- list.files(path = "data-tmp",
                 pattern = "csv$",
                 full.names = T)
-
 dat_cf <- map(.x = x, .f = fread) |> rbindlist(use.names = T, fill = T)
 rm(x)
 
@@ -28,8 +27,17 @@ dat_cf <- dat_cf[, .(
 )]
 gc()
 
-dat_cf[, .N, keyby = .(essround, name, edition, proddate)]
+dat_cf[grep("^[0-9]*$", idno, invert = TRUE)]
+dat_cf[grep('"', idno)]
+dat_cf[, idno := as.integer(sub('"', '', idno))]
 
+dat_cf[grep('"', cntry), .N, keyby = .(cntry)]
+dat_cf[, cntry := sub('"', '', cntry)]
+dat_cf[grep('"', cntry), .N, keyby = .(cntry)]
+
+dat_cf[, .N, keyby = .(essround, name, edition, proddate)]
+dat_cf[name == "ESS11SCCF_CZ_e02", essround := 11L]
+dat_cf[, .N, keyby = .(essround, name, edition, proddate)]
 
 # Self-completion
 dat_cf[, selfcomp := grepl("SC", name)]

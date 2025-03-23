@@ -162,8 +162,8 @@ tab_weight <- dat2[
     keyby = .(essround, cntry)
 ]
 tab_weight[, anweight := anweight * 10e3]
-tab_weight[, diff_d := abs(n_resp - dweight)]
-tab_weight[, diff_p := abs(n_resp - pspwght)]
+tab_weight[, diff_d := round(abs(n_resp - dweight))]
+tab_weight[, diff_p := round(abs(n_resp - pspwght))]
 
 openxlsx::write.xlsx(x = tab_weight, file = "tables/tab_weight_sums.xlsx")
 

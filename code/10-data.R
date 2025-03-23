@@ -87,7 +87,6 @@ file.copy(
   to = sub(pattern = "data-ess", replacement = "data-tmp", x = x),
   overwrite = TRUE
 )
-
 rm(x)
 
 
@@ -149,12 +148,17 @@ map(dat_r10, class)
 
 # R11
 files_r11 <- list.files(
-  path = "data-tmp", pattern = "^ESS11.*sav$", full.names = T
+  path = "data-tmp",
+  pattern = "^ESS11.*sav$",
+  full.names = TRUE
 )
+# Exclude CF data files
+files_r11 <- files_r11[!grepl("CF", basename(files_r11))]
 names(files_r11) <- basename(path = files_r11) |>
   sub(pattern = ".sav$", replacement = "") |>
   sub(pattern = "_.*$", replacement = "")
 names(files_r11)
+files_r11
 
 dat_r11 <- map(.x = files_r11, .f = haven::read_sav) |> map(.f = setDT)
 names(dat_r11)
@@ -331,13 +335,13 @@ dat[, .N, keyby = .(essround, selfcomp, edition, proddate)]
 # 4:      R10    FALSE     3.2 2023-11-02 37611
 # 5:      R10     TRUE     3.1 2023-11-02 22074
 # 6:      R11    FALSE     2.0 2024-11-20 40156
-# 7:      R11     TRUE     2.0 2025-01-22  1805
+# 7:      R11     TRUE     2.0 2025-03-11  1805
 
 # Number of respondents by country and round
 table_cntry_essround <- dcast.data.table(
   data = dat, formula = cntry ~ essround, fun.aggregate = length
 )
-table_cntry_essround[R11 > 0]
+table_cntry_essround
 fwrite(x = table_cntry_essround, file = "tables/table_cntry_essround.csv")
 
 
