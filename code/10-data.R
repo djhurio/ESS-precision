@@ -346,5 +346,6 @@ fwrite(x = table_cntry_essround, file = "tables/table_cntry_essround.csv")
 
 
 # Save data files for the next step
+if (!dir.exists("data")) dir.create("data")
 saveRDS(object = dat, file = "data/dat.rds")
 saveRDS(object = variables, file = "data/variables.rds")
