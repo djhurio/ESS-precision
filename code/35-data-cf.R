@@ -15,10 +15,13 @@ gc()
 # Check if new versions of the files have been published
 # Update files as necessary
 
-# Read data
-x <- list.files(path = "data-tmp",
-                pattern = "csv$",
-                full.names = T)
+# Read data only CF data
+x <- list.files(
+  path = "data-tmp",
+  pattern = "CF.*\\.csv$",
+  full.names = T
+)
+x
 dat_cf <- map(.x = x, .f = fread) |> rbindlist(use.names = T, fill = T)
 rm(x)
 
@@ -87,6 +90,9 @@ dat_cf[typsampa == 2L, typesamp := 3L]
 dat_cf[, .N, keyby = .(typesamp)]
 dat_cf[, .N, keyby = .(essround, typesamp)]
 
+dat_cf[is.na(typesamp), .N, keyby = .(essround, cntry)]
+dat_cf[essround == "R11" & cntry == "CZ"]
+
 # Labels
 dat_cf[, typesamp := factor(
   x = typesamp,
@@ -117,8 +123,12 @@ dat[is.na(resp), resp := FALSE]
 
 dat[, .N, keyby = .(cf, resp)]
 
-if (dat_cf[, .N] != dat[, .N]) warning("Error in CF and RESP merge")
-if (dat[, any(!cf)]) warning("There are respondents which are not in CF")
+if (dat_cf[, .N] != dat[!(essround == "R10" & cntry == "UA"), .N]) {
+  warning("Error in CF and RESP merge")
+}
+if (dat[!(essround == "R10" & cntry == "UA"), any(!cf)]) {
+  warning("There are respondents which are not in CF")
+}
 
 
 
@@ -199,12 +209,21 @@ map_chr(tab_cf_cntry, class)
 anyDuplicated(tab_cf_cntry, by = c("essround", "cntry"))
 
 # Outcome codes are not available for all rounds
+tab_cf_cntry[cntry == "UA"]
 tab_cf_cntry[, flag := sum(n_ineligibles) == 0L, by = .(essround, selfcomp)]
-tab_cf_cntry[(flag), n_ineligibles := NA_integer_]
+tab_cf_cntry[
+  (flag) | (essround == "R10" & cntry == "UA"),
+  n_ineligibles := NA_integer_
+]
 tab_cf_cntry[, flag := NULL]
 
 tab_cf_cntry[, rr := n_net / (n_gross - n_ineligibles)]
 tab_cf_cntry[, ri := n_ineligibles / n_gross]
+tab_cf_cntry[cntry == "UA"]
+
+
+# Gross sample size is not available
+tab_cf_cntry[n_gross == n_net]
 
 
 # Save

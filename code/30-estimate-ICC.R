@@ -26,7 +26,7 @@ dat_b <- dat2[, .N, keyby = .(essround, cntry, domain, PSU)]
 dat_b <- dat_b[, .(b = mean(N)), keyby = .(essround, cntry, domain)]
 
 dat_b
-dat_b[essround == "R09" & cntry == "HU"]
+dat_b[cntry == "UA"]
 
 dat_b[order(b)]
 dat_b[, summary(b)]

@@ -77,6 +77,7 @@ dat_b <- dat_b[
 
 dat_b
 dat_b[cntry == "CZ"]
+dat_b[cntry == "UA"]
 dat_b[order(b)]
 dat_b[, summary(b)]
 
@@ -106,6 +107,7 @@ dat_deff_p <- dat2[
 
 dat_deff_p
 dat_deff_p[cntry == "CZ"]
+dat_deff_p[cntry == "UA"]
 dat_deff_p[, as.list(summary(deff_p))]
 dat_deff_p[, as.list(summary(deff_p)), keyby = .(essround)]
 dat_deff_p[order(deff_p)]
@@ -239,6 +241,7 @@ tab_deff <- merge(
 
 tab_deff
 tab_deff[cntry == "CZ"]
+tab_deff[cntry == "UA"]
 tab_deff[, mean(n_variables), keyby = .(essround, selfcomp)]
 tab_deff[, sum(n_variables)]
 

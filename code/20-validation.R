@@ -46,6 +46,7 @@ dat[is.na(idno)]
 
 dat[, .N, keyby = domain]
 dat[, .N, keyby = .(essround, cntry, domain)]
+dat[cntry == "UA", .N, keyby = .(essround, cntry, domain)]
 
 dat[is.na(stratum), .N, keyby = .(essround, cntry, stratum)]
 
@@ -92,6 +93,7 @@ tab_cntry <- dat[, .(
     n_resp  = .N
 ), keyby = .(essround, selfcomp, cntry, domain)]
 tab_cntry
+tab_cntry[cntry == "UA"]
 
 tab_strata <- dat[, .(
     n_psu  = sum(!duplicated(PSU)),
@@ -164,6 +166,8 @@ tab_weight <- dat2[
 tab_weight[, anweight := anweight * 10e3]
 tab_weight[, diff_d := round(abs(n_resp - dweight))]
 tab_weight[, diff_p := round(abs(n_resp - pspwght))]
+tab_weight
+tab_weight[cntry == "UA"]
 
 openxlsx::write.xlsx(x = tab_weight, file = "tables/tab_weight_sums.xlsx")
 

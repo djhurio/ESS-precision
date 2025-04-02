@@ -80,15 +80,6 @@ for (x in list.files(path = "data-ess", pattern = ".zip$", full.names = T)) {
   utils::unzip(zipfile = x, exdir = "data-tmp")
 }
 
-# copy all SPSS data files
-x <- list.files(path = "data-ess", pattern = ".sav$", full.names = T)
-file.copy(
-  from = x,
-  to = sub(pattern = "data-ess", replacement = "data-tmp", x = x),
-  overwrite = TRUE
-)
-rm(x)
-
 
 # SDDF is separate for rounds 7-8
 # Function to combine main and SDDF data files
@@ -139,8 +130,10 @@ files_r10 <- list.files(
   path = "data-tmp", pattern = "^ESS10.*sav$", full.names = T
 )
 names(files_r10) <- basename(path = files_r10) |>
-  sub(pattern = ".sav$", replacement = "")
+  sub(pattern = ".sav$", replacement = "") |>
+  sub(pattern = "_.*$", replacement = "")
 names(files_r10)
+files_r10
 
 dat_r10 <- map(.x = files_r10, .f = haven::read_sav) |> map(.f = setDT)
 names(dat_r10)
@@ -198,20 +191,20 @@ variables[
 variables[, .N, keyby = .(flag)]
 
 variables[(flag)]
-#      type  varname  ESS07  ESS08  ESS09  ESS10 ESS10SC  ESS11 ESS11SC   flag
-#    <fctr>   <char> <lgcl> <lgcl> <lgcl> <lgcl>  <lgcl> <lgcl>  <lgcl> <lgcl>
-# 1: Binary   dscrdk   TRUE   TRUE   TRUE   TRUE   FALSE   TRUE   FALSE   TRUE
-# 2: Binary  dscrref   TRUE   TRUE   TRUE   TRUE   FALSE   TRUE   FALSE   TRUE
-# 3: Binary  dvrcdev  FALSE  FALSE  FALSE  FALSE   FALSE  FALSE   FALSE   TRUE
-# 4: Binary  lvgptne  FALSE  FALSE  FALSE  FALSE   FALSE  FALSE   FALSE   TRUE
-# 5: Binary   rlgblg   TRUE   TRUE   TRUE   TRUE   FALSE   TRUE   FALSE   TRUE
-# 6: Binary  rlgblge   TRUE   TRUE   TRUE   TRUE   FALSE   TRUE   FALSE   TRUE
-# 7: Binary scrlgblg  FALSE  FALSE  FALSE  FALSE    TRUE  FALSE    TRUE   TRUE
+#      type  varname  ESS07  ESS08  ESS09  ESS10 ESS10SC ESS10UA  ESS11 ESS11SC   flag
+#    <fctr>   <char> <lgcl> <lgcl> <lgcl> <lgcl>  <lgcl>  <lgcl> <lgcl>  <lgcl> <lgcl>
+# 1: Binary   dscrdk   TRUE   TRUE   TRUE   TRUE   FALSE    TRUE   TRUE   FALSE   TRUE
+# 2: Binary  dscrref   TRUE   TRUE   TRUE   TRUE   FALSE    TRUE   TRUE   FALSE   TRUE
+# 3: Binary  dvrcdev  FALSE  FALSE  FALSE  FALSE   FALSE   FALSE  FALSE   FALSE   TRUE
+# 4: Binary  lvgptne  FALSE  FALSE  FALSE  FALSE   FALSE   FALSE  FALSE   FALSE   TRUE
+# 5: Binary   rlgblg   TRUE   TRUE   TRUE   TRUE   FALSE    TRUE   TRUE   FALSE   TRUE
+# 6: Binary  rlgblge   TRUE   TRUE   TRUE   TRUE   FALSE    TRUE   TRUE   FALSE   TRUE
+# 7: Binary scrlgblg  FALSE  FALSE  FALSE  FALSE    TRUE   FALSE  FALSE    TRUE   TRUE
 
 variables[, map(.SD, sum), .SDcols = as.character(round.labels)]
-#      ESS07 ESS08 ESS09 ESS10 ESS10SC ESS11 ESS11SC
-#      <int> <int> <int> <int>   <int> <int>   <int>
-#   1:    75    75    75    75      72    75      72
+#      ESS07 ESS08 ESS09 ESS10 ESS10SC ESS10UA ESS11 ESS11SC
+#      <int> <int> <int> <int>   <int>   <int> <int>   <int>
+#   1:    75    75    75    75      72      75    75      72
 
 # Some of the variables are not available in all rounds
 # Those variables will be excluded for the ICC estimation
@@ -228,7 +221,7 @@ varnames.design <- c(
 )
 
 
-# Helper function to subselect necessary variables
+# Helper function to sub-select necessary variables
 foo <- function(dt) {
   name_sel <- intersect(c(varnames.design, variables$varname), names(dt))
   dt[, c(name_sel), with = F]
@@ -236,11 +229,6 @@ foo <- function(dt) {
 
 # Keep only necessary variables
 dat <- lapply(dat, foo)
-
-# dat <- dat[, c(varnames.design, variables$varname), with = F]
-# # dim(dat)
-# gc()
-
 
 
 # Combine data from all rounds in one data.table
@@ -295,12 +283,6 @@ write.xlsx(variables, file = "tables/variables.xlsx",
 fwrite(variables, file = "tables/variables.csv", quote = T)
 
 
-# intersect(names(dat), variables$varname)
-# head(names(dat), 10)
-# tail(names(dat), 10)
-
-
-
 # Check the edition and production dates
 dat[, .N, keyby = .(essround, name, edition, proddate)]
 #    essround           name edition   proddate     N
@@ -309,8 +291,8 @@ dat[, .N, keyby = .(essround, name, edition, proddate)]
 # 2:        8      ESS8e02_3     2.3 23.11.2023 44387
 # 3:        9      ESS9e03_2     3.2 23.11.2023 49519
 # 4:       10   ESS10SCe03_1     3.1 02.11.2023 22074
-# 5:       10     ESS10e03_2     3.2 02.11.2023 37611
-# 6:       11 ESS11SC_CZ_e02     2.0 22.01.2025  1805
+# 5:       10     ESS10e03_2     3.2 02.11.2023 39142
+# 6:       11 ESS11SC_CZ_e03     3.0 11.03.2025  1805
 # 7:       11       ESS11e02     2.0 20.11.2024 40156
 
 # Self-completion
@@ -332,7 +314,7 @@ dat[, .N, keyby = .(essround, selfcomp, edition, proddate)]
 # 1:      R07    FALSE     2.3 2023-11-23 40185
 # 2:      R08    FALSE     2.3 2023-11-23 44387
 # 3:      R09    FALSE     3.2 2023-11-23 49519
-# 4:      R10    FALSE     3.2 2023-11-02 37611
+# 4:      R10    FALSE     3.2 2023-11-02 39142
 # 5:      R10     TRUE     3.1 2023-11-02 22074
 # 6:      R11    FALSE     2.0 2024-11-20 40156
 # 7:      R11     TRUE     2.0 2025-03-11  1805
