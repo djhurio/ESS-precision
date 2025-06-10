@@ -37,9 +37,17 @@ dat_b[b == 1]
 # Transfer data to long format
 dat3 <- melt.data.table(
   data = dat2,
-  id.vars = c("essround", "selfcomp", "cntry", "domain",
-              "STR", "PSU", "idno",
-              "weight_des", "weight_est"),
+  id.vars = c(
+    "essround",
+    "selfcomp",
+    "cntry",
+    "domain",
+    "STR",
+    "PSU",
+    "idno",
+    "weight_des",
+    "weight_est"
+  ),
   measure.vars = intersect(names(dat2), variables$varname),
   na.rm = F,
   variable.name = "varname",
@@ -49,8 +57,13 @@ dat3 <- melt.data.table(
 
 # Add type of variable
 setkey(dat3, varname)
-dat3 <- merge(dat3, variables[, .(varname, type)],
-              by = "varname", all.x = T, sort = F)
+dat3 <- merge(
+  dat3,
+  variables[, .(varname, type)],
+  by = "varname",
+  all.x = T,
+  sort = F
+)
 dat3[, .N, keyby = .(type)]
 
 # Add flag, if variable should be excluded from the ICC estimation
@@ -72,26 +85,32 @@ variables_long[, selfcomp := grepl("SC", round)]
 variables_long[, round := NULL]
 
 setkey(dat3, varname, essround, selfcomp)
-dat3 <- merge(dat3, variables_long,
-              by = c("varname", "essround", "selfcomp"),
-              all.x = T)
+dat3 <- merge(
+  dat3,
+  variables_long,
+  by = c("varname", "essround", "selfcomp"),
+  all.x = T
+)
 
 dat3[, .N, keyby = .(flag)]
 dat3[!(flag), .N, keyby = .(essround, selfcomp, varname)]
 
-unique(dat3[, .(essround, selfcomp,
-                varname)])[, .(n = .N),
-                           keyby = .(essround, selfcomp)]
-unique(dat3[, .(essround, selfcomp,
-                varname, flag)])[, .(n = sum(flag)),
-                                 keyby = .(essround, selfcomp)]
+unique(dat3[, .(essround, selfcomp, varname)])[,
+  .(n = .N),
+  keyby = .(essround, selfcomp)
+]
+unique(dat3[, .(essround, selfcomp, varname, flag)])[,
+  .(n = sum(flag)),
+  keyby = .(essround, selfcomp)
+]
 
 # Keep only variables used for the ICC estimation
 dat3 <- dat3[(flag)]
 dat3[, flag := NULL]
-unique(dat3[, .(essround, selfcomp,
-                varname)])[, .(n = .N),
-                           keyby = .(essround, selfcomp)]
+unique(dat3[, .(essround, selfcomp, varname)])[,
+  .(n = .N),
+  keyby = .(essround, selfcomp)
+]
 
 # Ratio of two totals is used for the estimation
 # Calculate Y and Z values for ratio estimation
@@ -106,30 +125,38 @@ dat3[, value_z := as.integer(!is.na(value))]
 
 
 # Test
-dat3[, lapply(.SD, function(x) round(mean(x), 3)),
-     .SDcols = c("value_y", "value_z"), by = .(varname)][order(value_y)]
-dat3[, lapply(.SD, function(x) round(mean(x), 3)),
-     .SDcols = c("value_y", "value_z"), by = .(varname)][order(-value_z)]
+dat3[,
+  lapply(.SD, function(x) round(mean(x), 3)),
+  .SDcols = c("value_y", "value_z"),
+  by = .(varname)
+][order(value_y)]
+dat3[,
+  lapply(.SD, function(x) round(mean(x), 3)),
+  .SDcols = c("value_y", "value_z"),
+  by = .(varname)
+][order(-value_z)]
 
 tab_mean_y <- dcast.data.table(
   data = dat3,
   formula = varname ~ essround,
   value.var = "value_y",
   fun.aggregate = function(x) round(mean(x), 3)
-) |> setnames(
-  old = as.character(round.labels),
-  new = paste0(round.labels, "_Y")
-)
+) |>
+  setnames(
+    old = as.character(round.labels),
+    new = paste0(round.labels, "_Y")
+  )
 
 tab_mean_z <- dcast.data.table(
   data = dat3,
   formula = varname ~ essround,
   value.var = "value_z",
   fun.aggregate = function(x) round(mean(x), 3)
-) |> setnames(
-  old = as.character(round.labels),
-  new = paste0(round.labels, "_Z")
-)
+) |>
+  setnames(
+    old = as.character(round.labels),
+    new = paste0(round.labels, "_Z")
+  )
 
 variables[, id := .I]
 variables <- Reduce(f = merge, x = list(variables, tab_mean_y, tab_mean_z))
@@ -140,19 +167,18 @@ setcolorder(variables, "id")
 write.xlsx(
   x = variables,
   file = "tables/variables-2.xlsx",
-  colWidths = "auto", firstRow = T,
+  colWidths = "auto",
+  firstRow = T,
   headerStyle = createStyle(textDecoration = "italic", halign = "center")
 )
 
 fwrite(x = variables, file = "tables/variables-2.csv", quote = T)
 
 
-
-
-
 # Variable name extended with round, country, and domain
-dat3[, varname_ext := paste(essround, cntry, paste0("D", domain),
-                            varname, sep = "_")]
+dat3[,
+  varname_ext := paste(essround, cntry, paste0("D", domain), varname, sep = "_")
+]
 setkey(dat3, varname_ext)
 dat3[, .N, keyby = .(varname_ext)]
 
@@ -178,16 +204,18 @@ tab_psu <- tab_psu[, .(max_sd_y_psu = max(sd_y_psu)), keyby = .(varname_ext)]
 tab_psu[max_sd_y_psu == 0]
 
 
-
 # Summary table
-tab_variables <- dat3[, .(
-  n_resp = .N,
-  n_na = sum(is.na(value)),
-  sd_y = sd(value_y),
-  pop_size = sum(weight_est),
-  total_Y  = sum(weight_est * value_y),
-  total_Z  = sum(weight_est * value_z)
-), keyby = .(varname_ext, essround, cntry, domain, varname, type)]
+tab_variables <- dat3[,
+  .(
+    n_resp = .N,
+    n_na = sum(is.na(value)),
+    sd_y = sd(value_y),
+    pop_size = sum(weight_est),
+    total_Y = sum(weight_est * value_y),
+    total_Z = sum(weight_est * value_z)
+  ),
+  keyby = .(varname_ext, essround, cntry, domain, varname, type)
+]
 
 tab_variables <- merge(
   x = tab_variables,
@@ -215,19 +243,22 @@ tab_variables[sd_y == 0] # No variation in variable
 
 # No variation in PSUs
 tab_variables[max_sd_y_psu == 0]
-tab_variables[b > 1 & sd_y > 0 & ratio != 1 & max_sd_y_psu == 0 & n_resp - n_na > 1L]
+tab_variables[
+  b > 1 & sd_y > 0 & ratio != 1 & max_sd_y_psu == 0 & n_resp - n_na > 1L
+]
 
 # Mark variables where estimation of effective sample size is not possible:
 # 1) variable is a constant (sd_y == 0)
 # 2) mean estimate is 1 (total_Y == total_Z)
 # 3) There is only one respondent ((n_resp - n_na) == 1L)
 # 4) There is no variance in PSUs (max_sd_y_psu == 0)
-tab_variables[, flag := (b > 1) & (sd_y == 0 | total_Y == total_Z |
-                (n_resp - n_na) == 1L | max_sd_y_psu == 0)]
+tab_variables[,
+  flag := (b > 1) &
+    (sd_y == 0 | total_Y == total_Z | (n_resp - n_na) == 1L | max_sd_y_psu == 0)
+]
 tab_variables[, .N, keyby = .(flag)]
 
 # tab_variables[("R5_LT_D1_emplno")]
-
 
 # Number of variables by country, domain, round
 dcast.data.table(
@@ -266,7 +297,6 @@ length(varname_list)
 # Cluster Sampling
 # https://ocw.jhsph.edu/courses/StatMethodsForSampleSurveys/PDFs/Lecture5.pdf
 
-
 # Order by
 setkey(dat3, varname_ext, PSU)
 
@@ -292,10 +322,10 @@ setkey(dat3, varname_ext, PSU)
 
 estimICC <- function(x) {
   cat(which(x == varname_list), "/", length(varname_list), ":", x, "\n")
-  data.table(varname_ext = x,
-             ICC = max(0, ICC::ICCbare(x = factor(PSU),
-                                       y = lin_val,
-                                       data = dat3[.(x)])))
+  data.table(
+    varname_ext = x,
+    ICC = max(0, ICC::ICCbare(x = factor(PSU), y = lin_val, data = dat3[.(x)]))
+  )
 }
 
 estimICC(sample(varname_list, 1))
@@ -324,7 +354,6 @@ estimICC(sample(varname_list, 1))
 # median(x)
 # x[round(75 / 2)]
 
-
 # Real estimation for all rounds and countries
 
 # Options (stop at warning)
@@ -350,7 +379,7 @@ print(t2 - t1)
 # Time difference of 24.12371 mins  (2024-11-23) R11
 # Time difference of 23.90001 mins  (2024-12-25) R11 + CZ
 # Time difference of 23.18019 mins  (2025-02-02) R11 + CZ edition 2.0
-
+# Time difference of 33.11785 mins  (2025-06-10) R11 edition 3.0 Positron IDE
 
 # Options (stop at error - default)
 options(warn = 1)
@@ -362,7 +391,6 @@ dat_ICC <- rbindlist(dat_ICC, use.names = T, fill = T)
 setkey(dat_ICC, varname_ext)
 
 saveRDS(object = dat_ICC, file = "data/dat_ICC.rds")
-
 
 # # Load
 # dat_ICC <- readRDS(file = "data/dat_ICC.rds")

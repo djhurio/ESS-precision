@@ -60,11 +60,15 @@ dat[is.na(stratum), .N, keyby = .(essround, cntry, stratum)]
 m <- dat[, nchar(max(stratum))]
 m
 
-dat[, STR := paste(
-    essround, cntry, paste0("D", domain),
+dat[,
+  STR := paste(
+    essround,
+    cntry,
+    paste0("D", domain),
     stringr::str_pad(string = stratum, width = m, pad = "0"),
     sep = "_"
-)]
+  )
+]
 
 dat[, .N, keyby = .(essround, cntry, domain, stratum, STR)]
 dat[, .N, keyby = .(essround, cntry, domain, stratum)]
@@ -74,11 +78,13 @@ dat[, .N, keyby = .(STR)]
 m <- dat[, nchar(max(psu))]
 m
 
-dat[, PSU := paste(
+dat[,
+  PSU := paste(
     STR,
     stringr::str_pad(string = psu, width = m, pad = "0"),
     sep = "_"
-)]
+  )
+]
 
 dat[, .N, keyby = .(essround, cntry, domain, stratum, psu, PSU)]
 dat[, .N, keyby = .(essround, cntry, domain, stratum, psu)]
@@ -87,37 +93,46 @@ dat[, .N, keyby = .(STR, PSU)]
 
 dat[is.na(psu), .(stratum, psu, STR, PSU)]
 
-tab_cntry <- dat[, .(
+tab_cntry <- dat[,
+  .(
     n_strat = sum(!duplicated(STR)),
-    n_psu   = sum(!duplicated(PSU)),
-    n_resp  = .N
-), keyby = .(essround, selfcomp, cntry, domain)]
+    n_psu = sum(!duplicated(PSU)),
+    n_resp = .N
+  ),
+  keyby = .(essround, selfcomp, cntry, domain)
+]
 tab_cntry
 tab_cntry[cntry == "UA"]
 
-tab_strata <- dat[, .(
-    n_psu  = sum(!duplicated(PSU)),
+tab_strata <- dat[,
+  .(
+    n_psu = sum(!duplicated(PSU)),
     n_resp = .N
-), keyby = .(essround, selfcomp, cntry, domain, STR)]
+  ),
+  keyby = .(essround, selfcomp, cntry, domain, STR)
+]
 tab_strata
 
-tab_psu <- dat[, .(
+tab_psu <- dat[,
+  .(
     n_resp = .N
-), keyby = .(essround, selfcomp, cntry, domain, STR, PSU)]
+  ),
+  keyby = .(essround, selfcomp, cntry, domain, STR, PSU)
+]
 tab_psu
 
 tabl <- list(tab_cntry, tab_strata, tab_psu)
 names(tabl) <- c("cntry", "strata", "psu")
 
 write.xlsx(
-    tabl,
-    file = "tables/SDDF-tables.xlsx",
-    colWidths = "auto",
-    firstRow = T,
-    headerStyle = createStyle(
-        textDecoration = "italic",
-        halign = "center"
-    )
+  tabl,
+  file = "tables/SDDF-tables.xlsx",
+  colWidths = "auto",
+  firstRow = T,
+  headerStyle = createStyle(
+    textDecoration = "italic",
+    halign = "center"
+  )
 )
 
 
@@ -143,25 +158,27 @@ dat2[, prob := as.numeric(prob)]
 dat2[, .N, keyby = .(na_prob = is.na(prob), na_dweight = is.na(dweight))]
 dat2[is.na(prob), .N, keyby = .(essround, cntry)]
 
-dat2[, .N, keyby = .(
+dat2[,
+  .N,
+  keyby = .(
     essround,
-    prob     = !is.na(prob),
-    dweight  = !is.na(dweight),
-    pspwght  = !is.na(pspwght),
-    pweight  = !is.na(pweight),
+    prob = !is.na(prob),
+    dweight = !is.na(dweight),
+    pspwght = !is.na(pspwght),
+    pweight = !is.na(pweight),
     anweight = !is.na(anweight)
-)]
+  )
+]
 
 dat2[is.na(dweight), .(essround, cntry, dweight, pspwght, pweight, anweight)]
 
 
 # Weight testing
 dat2[is.na(anweight), anweight := pspwght * pweight]
-tab_weight <- dat2[
-    ,
-    c(.(n_resp = .N), lapply(.SD, sum)),
-    .SDcols = c("dweight", "pspwght", "anweight"),
-    keyby = .(essround, cntry)
+tab_weight <- dat2[,
+  c(.(n_resp = .N), lapply(.SD, sum)),
+  .SDcols = c("dweight", "pspwght", "anweight"),
+  keyby = .(essround, cntry)
 ]
 tab_weight[, anweight := anweight * 10e3]
 tab_weight[, diff_d := round(abs(n_resp - dweight))]
@@ -176,18 +193,17 @@ openxlsx::write.xlsx(x = tab_weight, file = "tables/tab_weight_sums.xlsx")
 dat2[, summary(prob)]
 
 dat2[prob == 0, .N, keyby = .(essround, cntry)]
-dat2[prob >  1, .N, keyby = .(essround, cntry)]
+dat2[prob > 1, .N, keyby = .(essround, cntry)]
 
-dat2[prob >  0, dw := 1 / prob]
+dat2[prob > 0, dw := 1 / prob]
 dat2[prob == 0 | prob > 1, dw := 1]
 
 tmp <- dat2[, .(essround, cntry, dweight, pspwght, pweight, anweight, prob, dw)]
 
-tmp[
-    ,
-    c(.(n = .N), lapply(.SD, sum)),
-    .SDcols = c("dweight", "pspwght", "pweight", "anweight"),
-    keyby = .(essround, cntry)
+tmp[,
+  c(.(n = .N), lapply(.SD, sum)),
+  .SDcols = c("dweight", "pspwght", "pweight", "anweight"),
+  keyby = .(essround, cntry)
 ]
 
 tmp[, dweight_orig := .N * dw / sum(dw), by = .(essround, cntry)]
@@ -258,12 +274,18 @@ dat2[, dw := NULL]
 
 # Estimation weights used for the pop size and ratio linearisation
 dat2[!is.na(pspwght), weight_est := pspwght * pweight * 10e3]
-dat2[ is.na(pspwght), weight_est := dweight * pweight * 10e3]
+dat2[is.na(pspwght), weight_est := dweight * pweight * 10e3]
 
-dat2[, lapply(.SD, sum), .SDcols = c("weight_des", "weight_est"),
-     keyby = .(essround)][, all.equal(weight_des, weight_est)]
-dat2[, lapply(.SD, sum), .SDcols = c("weight_des", "weight_est"),
-     keyby = .(essround, cntry)][, all.equal(weight_des, weight_est)]
+dat2[,
+  lapply(.SD, sum),
+  .SDcols = c("weight_des", "weight_est"),
+  keyby = .(essround)
+][, all.equal(weight_des, weight_est)]
+dat2[,
+  lapply(.SD, sum),
+  .SDcols = c("weight_des", "weight_est"),
+  keyby = .(essround, cntry)
+][, all.equal(weight_des, weight_est)]
 
 
 # Save ####

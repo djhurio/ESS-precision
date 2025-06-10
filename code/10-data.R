@@ -61,7 +61,9 @@ variables <- rbind(
 setorder(variables, type, varname)
 variables
 
-if (length(variables$varname) != 75L + 3L) stop("Check ICC variables")
+if (length(variables$varname) != 75L + 3L) {
+  stop("Check ICC variables")
+}
 
 
 # ESS data
@@ -84,35 +86,39 @@ for (x in list.files(path = "data-ess", pattern = ".zip$", full.names = T)) {
 # SDDF is separate for rounds 7-8
 # Function to combine main and SDDF data files
 read.ess <- function(r) {
-
   # Survey data
   dat_surv <- list.files(
     path = "data-tmp",
-    pattern = glue::glue("^ESS{r}e.*sav$"), full.names = T
-  ) |> haven::read_sav()
+    pattern = glue::glue("^ESS{r}e.*sav$"),
+    full.names = T
+  ) |>
+    haven::read_sav()
   setDT(dat_surv)
 
   # SDDF data
   dat_sddf <- list.files(
     path = "data-tmp",
-    pattern = glue::glue("^ESS{r}SDDFe.*sav$"), full.names = T
-  ) |> haven::read_sav()
+    pattern = glue::glue("^ESS{r}SDDFe.*sav$"),
+    full.names = T
+  ) |>
+    haven::read_sav()
   setDT(dat_sddf)
 
-  if (dat_surv[, .N] != dat_sddf[, .N]) stop("Wrong number of rows")
+  if (dat_surv[, .N] != dat_sddf[, .N]) {
+    stop("Wrong number of rows")
+  }
 
   # Rename
   x <- c("name", "edition", "proddate")
   setnames(x = dat_sddf, old = x, new = paste0(x, "_sddf"))
 
-  dat <- merge(x = dat_surv,
-               y = dat_sddf,
-               by = c("essround", "cntry", "idno"))
+  dat <- merge(x = dat_surv, y = dat_sddf, by = c("essround", "cntry", "idno"))
 
-  if (dat_surv[, .N] != dat[, .N]) stop("Wrong merge")
+  if (dat_surv[, .N] != dat[, .N]) {
+    stop("Wrong merge")
+  }
 
   return(dat)
-
 }
 
 # R7-R8
@@ -121,13 +127,20 @@ names(dat_r7r8)
 map(dat_r7r8, class)
 
 # R9
-dat_r9 <- read_sav(file = list.files(
-  path = "data-tmp", pattern = "^ESS9.*sav$", full.names = T
-)) |> setDT()
+dat_r9 <- read_sav(
+  file = list.files(
+    path = "data-tmp",
+    pattern = "^ESS9.*sav$",
+    full.names = T
+  )
+) |>
+  setDT()
 
 # R10
 files_r10 <- list.files(
-  path = "data-tmp", pattern = "^ESS10.*sav$", full.names = T
+  path = "data-tmp",
+  pattern = "^ESS10.*sav$",
+  full.names = T
 )
 names(files_r10) <- basename(path = files_r10) |>
   sub(pattern = ".sav$", replacement = "") |>
@@ -178,12 +191,14 @@ print(round.labels)
 
 
 # Mark which variables are available in each round
-variables[, c(as.character(round.labels)) := lapply(
-  X = dat.names, FUN = function(x) (variables$varname %in% x))
+variables[,
+  c(as.character(round.labels)) := lapply(
+    X = dat.names,
+    FUN = function(x) (variables$varname %in% x)
+  )
 ]
 
-variables[
-  ,
+variables[,
   flag := !all(unlist(.SD)),
   .SDcols = as.character(round.labels),
   by = .(varname)
@@ -209,15 +224,24 @@ variables[, map(.SD, sum), .SDcols = as.character(round.labels)]
 # Some of the variables are not available in all rounds
 # Those variables will be excluded for the ICC estimation
 
-
 # Variable selection to reduce the size of a data.table
 
 # Survey design variables and weights
 varnames.design <- c(
-  "name", "essround", "edition", "proddate",
-  "cntry", "idno",
-  "domain", "stratum", "psu", "prob",
-  "dweight", "pspwght", "pweight", "anweight"
+  "name",
+  "essround",
+  "edition",
+  "proddate",
+  "cntry",
+  "idno",
+  "domain",
+  "stratum",
+  "psu",
+  "prob",
+  "dweight",
+  "pspwght",
+  "pweight",
+  "anweight"
 )
 
 
@@ -249,7 +273,6 @@ dat <- haven::zap_missing(dat)
 dat <- haven::zap_widths(dat)
 # str(dat)
 
-
 # # Create variables which are missing for all rounds
 # x <- setdiff(variables$varname, names(dat))
 # if (length(x) > 0) dat[, c(x) := as.list(rep(NA_real_, length(x)))]
@@ -274,11 +297,16 @@ foo <- function(x) {
 variables[, values := foo(varname), by = varname]
 
 # Write out table about the target variables
-write.xlsx(variables, file = "tables/variables.xlsx",
-           colWidths = "auto",
-           firstRow = T,
-           headerStyle = createStyle(textDecoration = "italic",
-                                     halign = "center"))
+write.xlsx(
+  variables,
+  file = "tables/variables.xlsx",
+  colWidths = "auto",
+  firstRow = T,
+  headerStyle = createStyle(
+    textDecoration = "italic",
+    halign = "center"
+  )
+)
 
 fwrite(variables, file = "tables/variables.csv", quote = T)
 
@@ -293,7 +321,7 @@ dat[, .N, keyby = .(essround, name, edition, proddate)]
 # 4:       10   ESS10SCe03_1     3.1 02.11.2023 22074
 # 5:       10     ESS10e03_2     3.2 02.11.2023 39142
 # 6:       11 ESS11SC_CZ_e03     3.0 11.03.2025  1805
-# 7:       11       ESS11e02     2.0 20.11.2024 40156
+# 7:       11       ESS11e03     3.0 02.06.2025 46162
 
 # Self-completion
 dat[, selfcomp := grepl("SC", name)]
@@ -316,18 +344,22 @@ dat[, .N, keyby = .(essround, selfcomp, edition, proddate)]
 # 3:      R09    FALSE     3.2 2023-11-23 49519
 # 4:      R10    FALSE     3.2 2023-11-02 39142
 # 5:      R10     TRUE     3.1 2023-11-02 22074
-# 6:      R11    FALSE     2.0 2024-11-20 40156
+# 6:      R11    FALSE     3.0 2025-06-02 46162
 # 7:      R11     TRUE     2.0 2025-03-11  1805
 
 # Number of respondents by country and round
 table_cntry_essround <- dcast.data.table(
-  data = dat, formula = cntry ~ essround, fun.aggregate = length
+  data = dat,
+  formula = cntry ~ essround,
+  fun.aggregate = length
 )
 table_cntry_essround
 fwrite(x = table_cntry_essround, file = "tables/table_cntry_essround.csv")
 
 
 # Save data files for the next step
-if (!dir.exists("data")) dir.create("data")
+if (!dir.exists("data")) {
+  dir.create("data")
+}
 saveRDS(object = dat, file = "data/dat.rds")
 saveRDS(object = variables, file = "data/variables.rds")

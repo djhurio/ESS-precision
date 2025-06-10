@@ -53,8 +53,6 @@ dat_p[, cntry_dom := NULL]
 names(dat_p)
 
 
-
-
 # Results by Martin
 
 fn <- sort(list.files(
@@ -101,7 +99,7 @@ setnames(
 setnames(
   x = dat_m,
   old = c("deff_p", "deff_c", "ICC", "b"),
-  new = c("deffp",  "deffc",  "roh", "b_bar")
+  new = c("deffp", "deffc", "roh", "b_bar")
 )
 
 dat_m <- dat_m[, names(dat_p), with = FALSE]
@@ -110,7 +108,8 @@ dat_p_long <- melt.data.table(
   data = dat_p,
   id.vars = c("cntry", "domain"),
   na.rm = TRUE
-) |> unique()
+) |>
+  unique()
 
 anyDuplicated(dat_p_long, by = c("cntry", "domain", "variable"))
 dat_p_long[, n := .N, by = c("cntry", "domain", "variable")]
@@ -121,7 +120,8 @@ dat_m_long <- melt.data.table(
   data = dat_m,
   id.vars = c("cntry", "domain"),
   na.rm = TRUE
-) |> unique()
+) |>
+  unique()
 
 anyDuplicated(dat_m_long, by = c("cntry", "domain", "variable"))
 

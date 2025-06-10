@@ -26,11 +26,28 @@ dat_cf <- map(.x = x, .f = fread) |> rbindlist(use.names = T, fill = T)
 rm(x)
 
 dat_cf <- dat_cf[, .(
-  name, essround, edition, proddate, cntry, typesamp, typsampa, idno, foutcod
+  name,
+  essround,
+  edition,
+  proddate,
+  cntry,
+  typesamp,
+  typsampa,
+  idno,
+  foutcod
 )]
 gc()
 
 dat_cf[grep("^[0-9]*$", idno, invert = TRUE)]
+dat_cf[grep("^[0-9]*$", idno, invert = TRUE), .N]
+dat_cf[grep("^[0-9]*$", idno, invert = TRUE), .N, keyby = .(essround, cntry)]
+
+dat_cf[
+  essround == 11L & cntry %in% c("IL", "ME"),
+  .N,
+  keyby = .(essround, cntry, missing_idno = is.na(idno))
+]
+
 dat_cf[grep('"', idno)]
 dat_cf[, idno := as.integer(sub('"', '', idno))]
 
@@ -94,11 +111,13 @@ dat_cf[is.na(typesamp), .N, keyby = .(essround, cntry)]
 dat_cf[essround == "R11" & cntry == "CZ"]
 
 # Labels
-dat_cf[, typesamp := factor(
-  x = typesamp,
-  levels = 1:3,
-  labels = c("Individual person", "Household", "Address")
-)]
+dat_cf[,
+  typesamp := factor(
+    x = typesamp,
+    levels = 1:3,
+    labels = c("Individual person", "Household", "Address")
+  )
+]
 
 dat_cf[, .N, keyby = .(typesamp)]
 dat_cf[, .N, keyby = .(essround, typesamp)]
@@ -109,6 +128,8 @@ dat <- readRDS("data/dat2.rds")
 dat_resp <- dat[, .(essround, selfcomp, cntry, idno, resp = TRUE)]
 rm(dat)
 gc()
+
+dat_resp[is.na(idno)]
 
 setkey(dat_resp, essround, selfcomp, cntry, idno)
 
@@ -121,7 +142,15 @@ dat <- merge(dat_cf, dat_resp, all = TRUE)
 dat[is.na(cf), cf := FALSE]
 dat[is.na(resp), resp := FALSE]
 
-dat[, .N, keyby = .(cf, resp)]
+dat[is.na(idno), .N, keyby = .(cf, resp)]
+
+dat[
+  essround == "R11" & cntry %in% c("IL", "ME"),
+  .N,
+  keyby = .(essround, cntry, cf, resp, missing_idno = is.na(idno))
+]
+
+dat[!(essround == "R10" & cntry == "UA"), .N, keyby = .(cf, resp)]
 
 if (dat_cf[, .N] != dat[!(essround == "R10" & cntry == "UA"), .N]) {
   warning("Error in CF and RESP merge")
@@ -131,46 +160,76 @@ if (dat[!(essround == "R10" & cntry == "UA"), any(!cf)]) {
 }
 
 
-
 # Labels for Final Outcome Code of Contact Attempts
-dat[, foutcod_label := factor(
-  x = foutcod,
-  levels = c(0, 10, 11, 12, 20, 30, 31, 32, 33, 34, 41, 42, 43, 44, 45, 46,
-             51, 52, 53, 54, 61, 62, 63, 64, 65, 67, 88),
-  labels = c("Contact forms missing",
-             "Valid interview",
-             "Partial interview: break off",
-             "Invalid interview",
-             "Non-contact",
-             "Refusal because of opt-out list",
-             "Broken appointment",
-             "Refusal by respondent",
-             "Refusal by proxy",
-             "Household refusal, before selection",
-             "Respondent not available, away",
-             "Respondent mentally/physical unable/ill/sick (short term)",
-             "Respondent deceased",
-             "Language barrier",
-             "Contact but no interview, other",
-             "Respondent mentally/physical unable/ill/sick (long term)",
-             "Respondent moved out of country",
-             "Respondent moved to unknown destination",
-             "Respondent has moved, still in country",
-             "Address not traceable",
-             "Derelict or demolished house",
-             "Not yet built, not ready for occupation",
-             "Not occupied",
-             "Address not residential: business",
-             "Address not residential: institution",
-             "Other ineligible",
-             "Undefined")
-)]
+dat[,
+  foutcod_label := factor(
+    x = foutcod,
+    levels = c(
+      0,
+      10,
+      11,
+      12,
+      20,
+      30,
+      31,
+      32,
+      33,
+      34,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      51,
+      52,
+      53,
+      54,
+      61,
+      62,
+      63,
+      64,
+      65,
+      67,
+      88
+    ),
+    labels = c(
+      "Contact forms missing",
+      "Valid interview",
+      "Partial interview: break off",
+      "Invalid interview",
+      "Non-contact",
+      "Refusal because of opt-out list",
+      "Broken appointment",
+      "Refusal by respondent",
+      "Refusal by proxy",
+      "Household refusal, before selection",
+      "Respondent not available, away",
+      "Respondent mentally/physical unable/ill/sick (short term)",
+      "Respondent deceased",
+      "Language barrier",
+      "Contact but no interview, other",
+      "Respondent mentally/physical unable/ill/sick (long term)",
+      "Respondent moved out of country",
+      "Respondent moved to unknown destination",
+      "Respondent has moved, still in country",
+      "Address not traceable",
+      "Derelict or demolished house",
+      "Not yet built, not ready for occupation",
+      "Not occupied",
+      "Address not residential: business",
+      "Address not residential: institution",
+      "Other ineligible",
+      "Undefined"
+    )
+  )
+]
 
 # outcome
 dat[, outcome := NA_integer_]
-dat[ (resp),                                 outcome := 1L]
+dat[(resp), outcome := 1L]
 dat[!(resp) & foutcod %in% c(43, 51, 61:67), outcome := 3L]
-dat[is.na(outcome),                          outcome := 2L]
+dat[is.na(outcome), outcome := 2L]
 
 dat[, .N, keyby = .(outcome)]
 
@@ -181,7 +240,6 @@ dcast.data.table(
 )
 
 
-
 # # Test case for HR R10
 # tmp <- dat[essround == "R10" & cntry == "HR",
 #            .N,
@@ -190,17 +248,29 @@ dcast.data.table(
 # write.xlsx(x = tmp, file = "tables/R10-HR-CF-foutcod.xlsx", colWidths = "auto")
 # rm(tmp)
 
-
-
 # Sample size, ri, and rr
-tab_cf_cntry <- dat[
-  ,
-  .(typesamp = paste(unique(typesamp), collapse = "|"),
+
+dat[, .N, keyby = .(foutcod)]
+
+tab_cf_cntry <- dat[,
+  .(
+    typesamp = paste(unique(typesamp), collapse = "|"),
     n_gross = .N,
     n_net = sum(resp),
-    n_ineligibles = sum(outcome == 3)
+    n_ineligibles = sum(outcome == 3),
+    flag = all(is.na(foutcod))
   ),
   keyby = .(essround, selfcomp, cntry)
+]
+
+# Cases with no ineligibles recorded
+tab_cf_cntry[n_ineligibles == 0L & !flag]
+tab_cf_cntry[n_ineligibles == 0L & !flag, .(essround, selfcomp, cntry)]
+
+dat[
+  tab_cf_cntry[n_ineligibles == 0L & !flag, .(essround, selfcomp, cntry)],
+  .N,
+  keyby = .(essround, cntry, outcome, foutcod, foutcod_label)
 ]
 
 tab_cf_cntry
@@ -210,11 +280,7 @@ anyDuplicated(tab_cf_cntry, by = c("essround", "cntry"))
 
 # Outcome codes are not available for all rounds
 tab_cf_cntry[cntry == "UA"]
-tab_cf_cntry[, flag := sum(n_ineligibles) == 0L, by = .(essround, selfcomp)]
-tab_cf_cntry[
-  (flag) | (essround == "R10" & cntry == "UA"),
-  n_ineligibles := NA_integer_
-]
+tab_cf_cntry[(flag), n_ineligibles := NA_integer_]
 tab_cf_cntry[, flag := NULL]
 
 tab_cf_cntry[, rr := n_net / (n_gross - n_ineligibles)]
@@ -224,6 +290,7 @@ tab_cf_cntry[cntry == "UA"]
 
 # Gross sample size is not available
 tab_cf_cntry[n_gross == n_net]
+tab_cf_cntry[n_ineligibles == 0L]
 
 
 # Save
