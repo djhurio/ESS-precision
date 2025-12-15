@@ -29,7 +29,7 @@ dat[, dom_n := NULL]
 
 dcast.data.table(dat, essround ~ domain, fun.aggregate = length)
 
-if (anyDuplicated(dat, by = c("essround", "cntry", "idno"))) {
+if (anyDuplicated(dat, by = c("essround", "cntry", "domain", "idno"))) {
   warning("Duplicated records in data")
 }
 

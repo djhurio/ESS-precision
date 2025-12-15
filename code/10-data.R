@@ -160,9 +160,12 @@ files_r11 <- list.files(
 )
 # Exclude CF data files
 files_r11 <- files_r11[!grepl("CF", basename(files_r11))]
+
+# Rename
 names(files_r11) <- basename(path = files_r11) |>
   sub(pattern = ".sav$", replacement = "") |>
-  sub(pattern = "_.*$", replacement = "")
+  sub(pattern = "_.*$", replacement = "") |>
+  sub(pattern = "e.*$", replacement = "")
 names(files_r11)
 files_r11
 
@@ -321,7 +324,7 @@ dat[, .N, keyby = .(essround, name, edition, proddate)]
 # 4:       10   ESS10SCe03_1     3.1 02.11.2023 22074
 # 5:       10     ESS10e03_2     3.2 02.11.2023 39142
 # 6:       11 ESS11SC_CZ_e03     3.0 11.03.2025  1805
-# 7:       11       ESS11e03     3.0 02.06.2025 46162
+# 7:       11       ESS11e04     4.0 19.11.2025 50116
 
 # Self-completion
 dat[, selfcomp := grepl("SC", name)]
@@ -344,8 +347,8 @@ dat[, .N, keyby = .(essround, selfcomp, edition, proddate)]
 # 3:      R09    FALSE     3.2 2023-11-23 49519
 # 4:      R10    FALSE     3.2 2023-11-02 39142
 # 5:      R10     TRUE     3.1 2023-11-02 22074
-# 6:      R11    FALSE     3.0 2025-06-02 46162
-# 7:      R11     TRUE     2.0 2025-03-11  1805
+# 6:      R11    FALSE     4.0 2025-11-19 50116
+# 7:      R11     TRUE     3.0 2025-03-11  1805
 
 # Number of respondents by country and round
 table_cntry_essround <- dcast.data.table(
