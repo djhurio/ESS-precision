@@ -29,15 +29,16 @@ dat[, dom_n := NULL]
 
 dcast.data.table(dat, essround ~ domain, fun.aggregate = length)
 
-if (anyDuplicated(dat, by = c("essround", "cntry", "domain", "idno"))) {
-  warning("Duplicated records in data")
+if (anyDuplicated(dat, by = c("essround", "cntry", "idno"))) {
+  dat[, n := .N, by = .(essround, cntry, idno)]
+  print(dat[n > 1, .(essround, edition, proddate, cntry, idno)])
+  dat[, n := NULL]
+  stop("Duplicated records in data")
 }
 
-dat[, n := .N, by = .(essround, cntry, domain, idno)]
-dat[n > 1, .(essround, cntry, domain, idno)]
-dat[, n := NULL]
-dat[is.na(idno), .(essround, cntry, domain, idno)]
+dat[is.na(idno), .(essround, cntry, idno)]
 dat[is.na(idno)]
+
 
 # # Remove cases with missing value in idno
 # dat[, .N]

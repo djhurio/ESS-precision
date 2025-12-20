@@ -62,6 +62,7 @@ dat_cf[, .N, keyby = .(essround, name, edition, proddate)]
 # Self-completion
 dat_cf[, selfcomp := grepl("SC", name)]
 dat_cf[, .N, keyby = .(selfcomp)]
+dat_cf[, .N, keyby = .(essround, name, selfcomp, edition, proddate)]
 dat_cf[, name := NULL]
 
 # Round
@@ -133,6 +134,24 @@ dat_resp[is.na(idno)]
 
 setkey(dat_resp, essround, selfcomp, cntry, idno)
 
+key(dat_resp)
+key(dat_cf)
+
+# dat_resp <- unique(dat_resp)
+# dat_cf <- unique(dat_cf)
+
+if (anyDuplicated(dat_resp, by = key(dat_resp))) {
+  dat_resp[, n := .N, keyby = key(dat_resp)]
+  print(dat_resp[n > 1L])
+  stop("Duplicated keys in RESP data")
+}
+
+if (anyDuplicated(dat_cf, by = key(dat_cf))) {
+  dat_cf[, n := .N, keyby = key(dat_cf)]
+  print(dat_cf[n > 1L])
+  stop("Duplicated keys in CF data")
+}
+
 
 # Merge CF and resp
 dat_cf[, cf := TRUE]
@@ -151,6 +170,9 @@ dat[
 ]
 
 dat[!(essround == "R10" & cntry == "UA"), .N, keyby = .(cf, resp)]
+
+dat[, .N, keyby = .(essround)]
+dat[, .N, keyby = .(cntry)]
 
 if (dat_cf[, .N] != dat[!(essround == "R10" & cntry == "UA"), .N]) {
   warning("Error in CF and RESP merge")
