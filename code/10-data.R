@@ -324,7 +324,7 @@ dat[, .N, keyby = .(essround, name, edition, proddate)]
 # 4:       10   ESS10SCe03_1     3.1 02.11.2023 22074
 # 5:       10     ESS10e03_2     3.2 02.11.2023 39142
 # 6:       11 ESS11SC_CZ_e03     3.0 11.03.2025  1805
-# 7:       11       ESS11e04     4.0 19.11.2025 50116
+# 7:       11     ESS11e04_1     4.1 12.01.2026 50116
 
 # Self-completion
 dat[, selfcomp := grepl("SC", name)]
@@ -347,7 +347,7 @@ dat[, .N, keyby = .(essround, selfcomp, edition, proddate)]
 # 3:      R09    FALSE     3.2 2023-11-23 49519
 # 4:      R10    FALSE     3.2 2023-11-02 39142
 # 5:      R10     TRUE     3.1 2023-11-02 22074
-# 6:      R11    FALSE     4.0 2025-11-19 50116
+# 6:      R11    FALSE     4.1 2026-01-12 50116
 # 7:      R11     TRUE     3.0 2025-03-11  1805
 
 # Number of respondents by country and round

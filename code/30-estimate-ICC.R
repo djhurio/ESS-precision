@@ -381,6 +381,7 @@ print(t2 - t1)
 # Time difference of 23.18019 mins  (2025-02-02) R11 + CZ edition 2.0
 # Time difference of 33.11785 mins  (2025-06-10) R11 edition 3.0 Positron IDE
 # Time difference of 25.60039 mins  (2025-12-15) R11 edition 4.0
+# Time difference of 25.39473 mins  (2026-02-08) R11 edition 4.1
 
 # Options (stop at error - default)
 options(warn = 1)
