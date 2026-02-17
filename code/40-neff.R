@@ -227,12 +227,26 @@ dat_deff[, n_eff := n_resp / deff]
 
 
 # Aggregate to round / cntry / domain
-# ICC aggregation by median!
+# ICC aggregation by median and mean
 tab_deff <- dat_deff[,
-  c(.(n_variables = as.numeric(.N)), lapply(.SD, mean), .(ICC = median(ICC))),
+  c(
+    .(n_variables = as.numeric(.N)),
+    lapply(.SD, mean),
+    .(ICC_median = median(ICC), ICC_mean = mean(ICC))
+  ),
   .SDcols = c("n_resp", "pop_size", "b", "deff_p"),
   keyby = .(essround, cntry, selfcomp, edition, proddate, domain)
 ]
+
+# Refinement of ρ prediction algorithm when median is zero
+# https://github.com/djhurio/ESS-precision/issues/4
+delta <- .0001
+tab_deff[ICC_median < delta & ICC_mean > delta]
+tab_deff[, ICC := fifelse(ICC_median < delta, ICC_mean, ICC_median)]
+tab_deff[ICC_median < delta & ICC_mean > delta]
+tab_deff[abs(ICC - ICC_median) > delta]
+tab_deff[, c("ICC_mean", "ICC_median") := NULL]
+
 
 tab_deff <- merge(
   x = tab_cf_cntry[, .(essround, cntry, selfcomp, typesamp)],
@@ -296,13 +310,19 @@ pl_deff_by_dom <- ggplot(tab_deff) +
   facet_wrap(~cntry)
 
 
+# Calculate gamma - distribution of population by domains
+# https://github.com/djhurio/ESS-precision/issues/2
+# pop_size is a sum of estimation weights
+tab_deff[, gamma := pop_size / sum(pop_size), by = .(essround, cntry)]
+
+
 # Aggregate to cntry
 tab_deff_2 <- tab_deff[,
   c(
     .(n_domains = as.numeric(.N), n_variables = mean(n_variables)),
     lapply(.SD, sum)
   ),
-  .SDcols = c("n_resp", "pop_size", "n_eff"),
+  .SDcols = c("n_resp", "pop_size", "gamma", "n_eff"),
   keyby = .(essround, cntry, selfcomp, edition, proddate)
 ]
 
@@ -377,6 +397,35 @@ pl_neff <- ggplot(tab_deff_2) +
   facet_wrap(~cntry)
 
 
+# Combine domains and countries tables in one table
+# https://github.com/djhurio/ESS-precision/issues/3
+# tab_deff - table for domains
+# tab_deff_2 - table for countries
+# key(tab_deff)
+# key(tab_deff_2)
+
+# Augment country file with D0 information
+tab_deff_cntry <- merge(
+  x = tab_deff_2,
+  y = tab_deff[
+    domain == "D0",
+    .SD,
+    .SDcols = c(key(tab_deff_2), setdiff(names(tab_deff), names(tab_deff_2)))
+  ],
+  all.x = TRUE
+)
+# tab_deff_cntry[, .N, keyby = .(domain)]
+tab_deff_cntry[is.na(domain), domain := "D0"]
+# tab_deff_cntry[, .N, keyby = .(domain)]
+
+# Combine country and domain information
+tab_deff_cntry_domain <- rbindlist(
+  list(tab_deff_cntry, tab_deff[domain != "D0"]),
+  use.names = TRUE,
+  fill = TRUE
+)
+
+
 # Aggregate to round
 tab_deff_3 <- tab_deff_2[,
   c(.(n_cntries = .N), lapply(.SD, sum)),
@@ -424,51 +473,50 @@ pl_round <- ggplot(
   ggtitle(label = "ESS total sample size (bars) and deff (numbers)")
 
 
-# ICC exploring
-dat_deff[, mean(ICC)]
-dat_deff[, mean(ICC), keyby = .(type)]
+# # ICC exploring
+# dat_deff[, mean(ICC)]
+# dat_deff[, mean(ICC), keyby = .(type)]
 
-dcast.data.table(
-  data = dat_deff,
-  formula = essround ~ type,
-  fun.aggregate = mean,
-  value.var = "ICC"
-)
+# dcast.data.table(
+#   data = dat_deff,
+#   formula = essround ~ type,
+#   fun.aggregate = mean,
+#   value.var = "ICC"
+# )
 
-dcast.data.table(
-  data = dat_deff,
-  formula = cntry ~ type,
-  fun.aggregate = mean,
-  value.var = "ICC"
-)
+# dcast.data.table(
+#   data = dat_deff,
+#   formula = cntry ~ type,
+#   fun.aggregate = mean,
+#   value.var = "ICC"
+# )
 
-tab <- dat_deff[,
-  .(ICC = median(ICC)),
-  keyby = .(essround, cntry, domain, type)
-]
+# tab <- dat_deff[,
+#   .(ICC = median(ICC)),
+#   keyby = .(essround, cntry, domain, type)
+# ]
 
-pl_ICC_var_type <- ggplot(
-  data = tab,
-  mapping = aes(x = type, y = ICC, fill = type, linetype = domain)
-) +
-  geom_col(colour = "black", alpha = 1, position = "dodge") +
-  facet_grid(essround ~ cntry) +
-  theme(axis.text.x = element_blank()) +
-  ggtitle(label = "Mean ICC by variable type", subtitle = Sys.time())
+# pl_ICC_var_type <- ggplot(
+#   data = tab,
+#   mapping = aes(x = type, y = ICC, fill = type, linetype = domain)
+# ) +
+#   geom_col(colour = "black", alpha = 1, position = "dodge") +
+#   facet_grid(essround ~ cntry) +
+#   theme(axis.text.x = element_blank()) +
+#   ggtitle(label = "Mean ICC by variable type", subtitle = Sys.time())
 
-ggsave(
-  filename = "plots/plot_ICC_by_variable_type.pdf",
-  plot = pl_ICC_var_type,
-  width = 16,
-  height = 9
-)
-ggsave(
-  filename = "plots/plot_ICC_by_variable_type.png",
-  plot = pl_ICC_var_type,
-  width = 16,
-  height = 9
-)
-
+# ggsave(
+#   filename = "plots/plot_ICC_by_variable_type.pdf",
+#   plot = pl_ICC_var_type,
+#   width = 16,
+#   height = 9
+# )
+# ggsave(
+#   filename = "plots/plot_ICC_by_variable_type.png",
+#   plot = pl_ICC_var_type,
+#   width = 16,
+#   height = 9
+# )
 
 # Save for all countries ###
 dir.create(file.path("results", Sys.Date()), showWarnings = F)
@@ -493,6 +541,16 @@ setkey(
   domain
 )
 setkey(
+  tab_deff_cntry_domain,
+  essround,
+  cntry,
+  edition,
+  proddate,
+  typesamp,
+  selfcomp,
+  domain
+)
+setkey(
   dat_deff,
   essround,
   cntry,
@@ -506,14 +564,16 @@ setkey(
 
 setcolorder(tab_deff_2)
 setcolorder(tab_deff)
+setcolorder(tab_deff_cntry_domain)
 setcolorder(dat_deff)
 
 map_chr(tab_deff_2, class)
 map_chr(tab_deff, class)
+map_chr(tab_deff_cntry_domain, class)
 map_chr(dat_deff, class)
 
 cell_formats <- list(
-  proddate = list(numfmt = "YYYY-MM-DD", widths = 10),
+  proddate = list(numfmt = "yyyy-mm-dd", widths = 10),
   pop_size = list(numfmt = "#,##0", widths = "auto"),
   total_Y = list(numfmt = "#,##0", widths = "auto"),
   total_Z = list(numfmt = "#,##0", widths = "auto"),
@@ -537,8 +597,9 @@ cell_formats <- list(
   deff_c = list(numfmt = "0.000", widths = 9),
   deff_p = list(numfmt = "0.000", widths = 9),
   deff = list(numfmt = "0.000", widths = 9),
-  assessment = list(numfmt = "General", widths = 9),
+  gamma = list(numfmt = "0.000", widths = 9),
   selfcomp = list(numfmt = "General", widths = 9),
+  assessment = list(numfmt = "General", widths = 9),
   rr_assess = list(numfmt = "General", widths = 9),
   varname = list(numfmt = "@", widths = "auto"),
   typesamp = list(numfmt = "@", widths = "auto"),
@@ -552,6 +613,7 @@ wb_data <- list(
   round = tab_deff_3,
   cntry = tab_deff_2,
   domain = tab_deff,
+  cntry_domain = tab_deff_cntry_domain,
   variable = dat_deff
 )
 
@@ -562,16 +624,23 @@ t1 <- Sys.time()
 for (x in names(wb_data)) {
   dat_x <- wb_data[[x]]
   n <- dat_x[, .N]
-  wb$add_worksheet(sheet = x, zoom = 90)$add_data_table(
+  wb$add_worksheet(
     sheet = x,
-    dat_x
-  )$freeze_pane(sheet = x, firstRow = TRUE)
+    zoom = 90
+  )$add_data_table(
+    sheet = x,
+    x = dat_x,
+    na = ""
+  )$freeze_pane(
+    sheet = x,
+    firstRow = TRUE
+  )
   for (i in seq_along(dat_x)) {
     varnam <- names(dat_x)[i]
     if (varnam %in% names(cell_formats)) {
       wb$add_numfmt(
         sheet = x,
-        dims = paste0(int2col(i), c(1, n) + 1, collapse = ":"),
+        dims = wb_dims(rows = 1:n, cols = i, from_row = 2),
         numfmt = cell_formats[[varnam]]$numfmt
       )$set_col_widths(
         sheet = x,
