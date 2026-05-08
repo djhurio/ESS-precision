@@ -1,5 +1,7 @@
 # Install packages
 
+getOption("repos")
+
 # pak
 if (!"pak" %in% installed.packages()[, "Package"]) {
   install.packages("pak")
